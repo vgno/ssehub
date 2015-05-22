@@ -1,13 +1,14 @@
 # vim: set noet
-LIBS=-lpthread
+LIBS=-lpthread -lglog -lrabbitmq
 CC=g++
 ODIR=.
 EXECUTABLE=ssehub
 
 override CFLAGS+=-Wall
+override CFLAGS+=-std=c++11
 
-DEPS = client.h channel.h server.h
-_OBJ = client.o channel.o server.o main.o
+DEPS = lib/cJSON/cJSON.h SSEClient.h SSEChannel.h SSEServer.h SSEConfig.h AMQPConsumer.h
+_OBJ = lib/cJSON/cJSON.o SSEClient.o SSEChannel.o SSEServer.o SSEConfig.o AMQPConsumer.o main.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.cpp $(DEPS)

@@ -1,4 +1,4 @@
-#include "client.h"
+#include "SSEClient.h"
 
 SSEClient::SSEClient(int sock) {
 
