@@ -13,6 +13,8 @@ SSEServer::~SSEServer() {
   DLOG(INFO) << "SSEServer destructor called.";
 
   close(serverSocket);
+  close(efd);
+  free(eventList);
 
   for (it = channels.begin(); it != channels.end(); it++) {
     free(*it);
@@ -49,6 +51,12 @@ void SSEServer::initSocket() {
   LOG_IF(FATAL, (listen(serverSocket, 0)) == -1) << "Call to listen() failed.";
 
   LOG(INFO) << "Listening on " << config->getServer().bindIP << ":" << config->getServer().port;
+
+  efd = epoll_create1(0);
+  LOG_IF(FATAL, efd == -1) << "epoll_create1 failed.";
+
+  eventList = (struct epoll_event *)calloc(MAXEVENTS, sizeof(struct epoll_event));
+  LOG_IF(FATAL, eventList == NULL) << "Could not allocate memory for epoll eventlist.";
 }
 
 void SSEServer::initChannels() {
@@ -86,7 +94,26 @@ void SSEServer::acceptLoop() {
 
       continue; /* Try again. */
     }
-    close(tmpfd);
+
+    // Set non-blocking on client socket.
+    fcntl(tmpfd, F_SETFL, O_NONBLOCK);
+
+    // Add it to our epoll eventlist.
+    struct epoll_event event;
+    event.data.fd = tmpfd;
+    event.events = EPOLLIN | EPOLLET;
+    int ret = epoll_ctl(efd, EPOLL_CTL_ADD, tmpfd, &event);
+
+    if (ret == -1) {
+      LOG(ERROR) << "Could not add client to epoll eventlist: " << strerror(errno);
+      close(tmpfd);
+      continue;
+    }
+
+    // Log client ip.
+    char ip[32];
+    inet_ntop(AF_INET, &csin.sin_addr, (char*)&ip, 32);
+    LOG(INFO) << "Accepted new connection from " << ip;
   }
 }
 
@@ -101,5 +128,29 @@ void *SSEServer::routerThreadMain(void *pThis) {
 * Read request and route client to the requested channel.
 */
 void SSEServer::clientRouterLoop() {
+  int i, n;
+  char buf[512];
+
   DLOG(INFO) << "Started client router thread.";
+
+  while(1) {
+    n = epoll_wait(efd, eventList, MAXEVENTS, -1);
+
+    for (i = 0; i < n; i++) {
+      /* Close socket if an error occurs. */
+      if ((eventList[i].events & EPOLLERR) || (eventList[i].events & EPOLLHUP) || (!(eventList[i].events & EPOLLIN))) {
+        DLOG(ERROR) << "Error occoured while reading data from socket.";
+        close(eventList[i].data.fd);
+        continue;
+      }
+
+      memset(buf, '\0', 512);
+
+       /* Read from client. */
+      int len = read(eventList[i].data.fd, &buf, 512);
+
+      LOG(INFO) << "Read " << len << " bytes from client: " << buf;
+    }
+  }
+
 }
