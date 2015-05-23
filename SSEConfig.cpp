@@ -19,8 +19,13 @@ bool SSEConfig::load(const char *file) {
 
     json = cJSON_Parse(ss.str().c_str());
 
+    cJSON *server = cJSON_GetObjectItem(json, "server");
     cJSON *amqp = cJSON_GetObjectItem(json, "amqp");
     cJSON *channels = cJSON_GetObjectItem(json, "channels");
+
+    serverConfig.port   = cJSON_GetObjectItem(server, "port")->valueint;
+    serverConfig.bindIP = cJSON_GetObjectItem(server, "bind-ip")->valuestring;
+    serverConfig.logDir = cJSON_GetObjectItem(server, "logDir")->valuestring;
 
     for (int i = 0; i < cJSON_GetArraySize(channels); i++) {
       cJSON *item = cJSON_GetArrayItem(channels, i);
@@ -51,6 +56,10 @@ bool SSEConfig::load(const char *file) {
 
 SSEChannelConfigList SSEConfig::getChannels() {
   return chanConfList;
+}
+
+SSEServerConfig& SSEConfig::getServer() {
+  return serverConfig;
 }
 
 SSEConfig::SSEConfig(string file) {

@@ -5,6 +5,12 @@
 
 using namespace std;
 
+struct SSEServerConfig {
+  int port;
+  string bindIP;
+  string logDir;
+};
+
 struct SSEChannelConfig {
   string  ID;
   string  amqpHost;
@@ -22,9 +28,11 @@ class SSEConfig {
     bool load(const char*);
     SSEChannelConfigList getChannels();
     SSEConfig(string);
+    SSEServerConfig& getServer();
 
   private:
     SSEChannelConfigList chanConfList;
+    SSEServerConfig serverConfig;
 };
 
 #endif

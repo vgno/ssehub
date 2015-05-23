@@ -1,6 +1,8 @@
 {
-  "log": {
-    "dir": "./logs"
+  "server": {
+    "port": 8090,
+    "bind-ip": "0.0.0.0",
+    "logdir": "./"
   },
   "amqp": {
     "host": "127.0.0.1",
