@@ -27,6 +27,7 @@ class SSEChannel {
     void consume();
     static void amqpCallbackWrapper(void *, const string);
     void amqpCallback(string);
+    void addClient(int);
 
   private:
     vector<SSEClient> clientList;

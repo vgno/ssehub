@@ -26,3 +26,12 @@ void SSEChannel::amqpCallback(string msg) {
   LOG(INFO) << config.amqpQueue << ": " << msg;
 }
 
+string SSEChannel::getID() {
+  return config.ID;
+}
+
+void SSEChannel::addClient(int fd) {
+  LOG(INFO) << "Adding client to channel " << getID();
+  close(fd);
+}
+

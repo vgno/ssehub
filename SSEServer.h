@@ -14,26 +14,31 @@
 
 #define MAXEVENTS 1024
 
+extern int stop;
+
+typedef vector<SSEChannel*> SSEChannelList;
+
 class SSEServer {
   public:
     SSEServer(SSEConfig*);
     ~SSEServer();
     void run();
     static void *routerThreadMain(void *);
-    
+    string getUri(const char *);
+
   private:
     SSEConfig *config;
-    vector<SSEChannel*> channels;
+    SSEChannelList channels;
     int serverSocket;
     int efd;
     struct epoll_event *eventList;
     struct sockaddr_in sin;
     pthread_t routerThread;
-
     void initSocket();
     void initChannels();
     void acceptLoop();
     void clientRouterLoop();
+    SSEChannel* getChannel(string id);
 };
 
 #endif

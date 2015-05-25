@@ -1,5 +1,6 @@
 #include "SSEServer.h"
 #include <iostream>
+#include <thread>
 
 using namespace std;
 
@@ -12,13 +13,37 @@ SSEServer::~SSEServer() {
 
   DLOG(INFO) << "SSEServer destructor called.";
 
+  pthread_cancel(routerThread);
+
   close(serverSocket);
   close(efd);
   free(eventList);
 
   for (it = channels.begin(); it != channels.end(); it++) {
-    free(*it);
+    delete(*it);
   }
+}
+
+string SSEServer::getUri(const char* str) {
+  string uri;
+
+  if (strncmp("GET ", str, 4) == 0) {
+    uri.insert(0, str, 4, string::npos);
+
+    // Do not include data after space.
+    uri = uri.substr(0, uri.find(" "));
+
+    // Do not include newline.
+    int nlpos = uri.find('\n');
+
+    if (nlpos > 0) {
+      uri.erase(nlpos);
+    }
+  
+    return uri;
+  }
+
+  return "";
 }
 
 void SSEServer::run() {
@@ -68,8 +93,20 @@ void SSEServer::initChannels() {
   }
 }
 
+SSEChannel* SSEServer::getChannel(string id) {
+  SSEChannelList::iterator it;
+
+  for (it = channels.begin(); it != channels.end(); it++) {
+    if (((SSEChannel*)*it)->getID().compare(id) == 0) {
+      return (SSEChannel*)*it;
+    }
+  }
+
+  return NULL;
+}
+
 void SSEServer::acceptLoop() {
-  while(1) {
+  while(!stop) {
     struct sockaddr_in csin;
     socklen_t clen;
     int tmpfd;
@@ -89,7 +126,7 @@ void SSEServer::acceptLoop() {
         break;
 
         default:
-          LOG(ERROR) << "Error in accept(): " << strerror(errno);
+          LOG_IF(ERROR, !stop) << "Error in accept(): " << strerror(errno);
       }
 
       continue; /* Try again. */
@@ -119,7 +156,6 @@ void SSEServer::acceptLoop() {
 
 void *SSEServer::routerThreadMain(void *pThis) {
   SSEServer *srv = static_cast<SSEServer*>(pThis);
-
   srv->clientRouterLoop();
   return NULL;
 }
@@ -130,6 +166,7 @@ void *SSEServer::routerThreadMain(void *pThis) {
 void SSEServer::clientRouterLoop() {
   int i, n;
   char buf[512];
+  string uri;
 
   DLOG(INFO) << "Started client router thread.";
 
@@ -148,9 +185,22 @@ void SSEServer::clientRouterLoop() {
 
        /* Read from client. */
       int len = read(eventList[i].data.fd, &buf, 512);
+      uri = getUri(buf);
+      DLOG(INFO) << "Read " << len << " bytes from client: " << buf;
 
-      LOG(INFO) << "Read " << len << " bytes from client: " << buf;
+      if (!uri.empty()) {
+        DLOG(INFO) << "CHANNEL:" << uri.substr(1) << ".";
+
+        // substr(1) to remove the /.
+        SSEChannel *ch = getChannel(uri.substr(1));
+        if (ch != NULL) {
+          ch->addClient(eventList[i].data.fd);
+          epoll_ctl(efd, EPOLL_CTL_DEL, eventList[i].data.fd, NULL);
+        } else {
+          write(eventList[i].data.fd, "Channel does not exist.\r\n", 25);
+          close(eventList[i].data.fd);
+        }
+      }
     }
   }
-
 }
