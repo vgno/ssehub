@@ -5,7 +5,6 @@ ODIR=.
 EXECUTABLE=ssehub
 
 override CFLAGS+=-Wall
-override CFLAGS+=-std=c++11
 
 DEPS = lib/cJSON/cJSON.h SSEClient.h SSEChannel.h SSEServer.h SSEConfig.h AMQPConsumer.h
 _OBJ = lib/cJSON/cJSON.o SSEClient.o SSEChannel.o SSEServer.o SSEConfig.o AMQPConsumer.o main.o

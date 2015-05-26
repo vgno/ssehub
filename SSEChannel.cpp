@@ -1,6 +1,5 @@
 #include "SSEChannel.h"
 #include <iostream>
-#include <thread>
 
 using namespace std;
 

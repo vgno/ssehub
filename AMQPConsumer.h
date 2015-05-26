@@ -29,7 +29,7 @@ class AMQPConsumer {
     pthread_t thread;
     void(*callback)(void*, string);
     void *callbackArg;
-    amqp_socket_t *amqpSocket = NULL;
+    amqp_socket_t *amqpSocket;
     amqp_connection_state_t amqpConn;
     amqp_bytes_t amqpQueueName;
 };
