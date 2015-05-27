@@ -9,30 +9,27 @@ struct SSEServerConfig {
   int port;
   string bindIP;
   string logDir;
-};
-
-struct SSEChannelConfig {
-  string  ID;
-  string  amqpHost;
-  string  amqpQueue;
-  string  amqpUser;
-  string  amqpPassword;
-  int     amqpPort;
   int     pingInterval;
 };
 
-typedef vector<SSEChannelConfig> SSEChannelConfigList;
+struct SSEAmqpConfig {
+  string  host;
+  string  exchange;
+  string  user;
+  string  password;
+  int     port;
+};
 
 class SSEConfig {
   public:
     bool load(const char*);
-    SSEChannelConfigList getChannels();
     SSEConfig(string);
     SSEServerConfig& getServer();
+    SSEAmqpConfig& getAmqp();
 
   private:
-    SSEChannelConfigList chanConfList;
     SSEServerConfig serverConfig;
+    SSEAmqpConfig   amqpConfig;
 };
 
 #endif

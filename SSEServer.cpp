@@ -14,7 +14,7 @@ SSEServer::~SSEServer() {
   DLOG(INFO) << "SSEServer destructor called.";
 
   pthread_cancel(routerThread);
-
+ 
   close(serverSocket);
   close(efd);
   free(eventList);
@@ -22,6 +22,30 @@ SSEServer::~SSEServer() {
   for (it = channels.begin(); it != channels.end(); it++) {
     delete(*it);
   }
+}
+
+void SSEServer::amqpCallbackWrapper(void* pThis, const string key, const string msg) {
+  SSEServer* pt = static_cast<SSEServer *>(pThis);
+  pt->amqpCallback(key, msg);
+}
+
+void SSEServer::amqpCallback(string key, string msg) {
+  if (key.empty()) {
+    return;
+  }
+
+  SSEChannel *ch = getChannel(key);
+  
+  if (ch == NULL) {
+    channels.push_back(new SSEChannel(key));
+    // We have no clients here yet since this event is the initializer-event, do not broadcast.
+    return;    
+  }
+
+  SSEvent ev;
+  ev.id = 1337;
+  ev.data = msg;
+  ch->broadcast(ev);
 }
 
 string SSEServer::getUri(const char* str) {
@@ -48,7 +72,10 @@ string SSEServer::getUri(const char* str) {
 
 void SSEServer::run() {
   initSocket();
-  initChannels();
+  // initChannels();
+  amqp.Start(config->getAmqp().host, config->getAmqp().port, config->getAmqp().user,
+      config->getAmqp().password, "amq.fanout", "", SSEServer::amqpCallbackWrapper, this);
+
   pthread_create(&routerThread, NULL, &SSEServer::routerThreadMain, this);
   acceptLoop();
 }
@@ -82,15 +109,6 @@ void SSEServer::initSocket() {
 
   eventList = (struct epoll_event *)calloc(MAXEVENTS, sizeof(struct epoll_event));
   LOG_IF(FATAL, eventList == NULL) << "Could not allocate memory for epoll eventlist.";
-}
-
-void SSEServer::initChannels() {
-  SSEChannelConfigList::iterator it;
-  SSEChannelConfigList chanList = config->getChannels();
-
-  for (it = chanList.begin(); it != chanList.end(); it++) {
-    channels.push_back(new SSEChannel(*it));
-  }
 }
 
 SSEChannel* SSEServer::getChannel(string id) {

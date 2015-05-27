@@ -21,29 +21,16 @@ bool SSEConfig::load(const char *file) {
 
     cJSON *server = cJSON_GetObjectItem(json, "server");
     cJSON *amqp = cJSON_GetObjectItem(json, "amqp");
-    cJSON *channels = cJSON_GetObjectItem(json, "channels");
 
     serverConfig.port   = cJSON_GetObjectItem(server, "port")->valueint;
     serverConfig.bindIP = cJSON_GetObjectItem(server, "bind-ip")->valuestring;
     serverConfig.logDir = cJSON_GetObjectItem(server, "logDir")->valuestring;
 
-    for (int i = 0; i < cJSON_GetArraySize(channels); i++) {
-      cJSON *item = cJSON_GetArrayItem(channels, i);
-
-      SSEChannelConfig chanItem;
-      chanItem.ID = item->string;
-      chanItem.amqpQueue    = cJSON_GetObjectItem(item, "queueName")->valuestring;
-      chanItem.amqpUser     = cJSON_GetObjectItem(item, "user")->valuestring;
-      chanItem.amqpPassword = cJSON_GetObjectItem(item, "password")->valuestring;
-      chanItem.pingInterval = cJSON_GetObjectItem(item, "pingInterval")->valueint;
-    
-      /* For now just use the default amqp host and port.
-         Later we might support multiple amqp's.  */
-      chanItem.amqpHost = cJSON_GetObjectItem(amqp, "host")->valuestring;
-      chanItem.amqpPort = cJSON_GetObjectItem(amqp, "port")->valueint;
-
-      chanConfList.push_back(chanItem);
-    }
+    amqpConfig.host         = cJSON_GetObjectItem(amqp, "host")->valuestring;
+    amqpConfig.port         = cJSON_GetObjectItem(amqp, "port")->valueint;
+    amqpConfig.user         = cJSON_GetObjectItem(amqp, "user")->valuestring;
+    amqpConfig.password     = cJSON_GetObjectItem(amqp, "password")->valuestring;
+    amqpConfig.exchange     = cJSON_GetObjectItem(amqp, "exchange")->valuestring;
 
     cJSON_Delete(json);
   } else {
@@ -54,12 +41,12 @@ bool SSEConfig::load(const char *file) {
   return true;
 }
 
-SSEChannelConfigList SSEConfig::getChannels() {
-  return chanConfList;
-}
-
 SSEServerConfig& SSEConfig::getServer() {
   return serverConfig;
+}
+
+SSEAmqpConfig& SSEConfig::getAmqp() {
+  return amqpConfig;
 }
 
 SSEConfig::SSEConfig(string file) {

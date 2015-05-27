@@ -8,33 +8,26 @@
 #include <amqp.h>
 #include <amqp_framing.h>
 #include "SSEConfig.h"
-#include "SSEClient.h"
 #include "AMQPConsumer.h"
 
 using namespace std;
 
-typedef struct {
-  long timestamp;
-  string body;
-} SSEvent;
+struct SSEvent {
+  long id;
+  string data;
+};
 
 class SSEChannel {
   public:
-    SSEChannel(SSEChannelConfig);
+    SSEChannel(string);
     ~SSEChannel();
     string getID();
-    void broadcast(SSEvent *event);
-    void consume();
-    static void amqpCallbackWrapper(void *, const string);
-    void amqpCallback(string);
+    void broadcast(SSEvent);
     void addClient(int);
 
   private:
-    vector<SSEClient> clientList;
+    string id;
     vector<SSEvent> eventHistory;
-    SSEChannelConfig config;
-    AMQPConsumer amqp;
-
 };
 
 #endif

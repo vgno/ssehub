@@ -3,13 +3,13 @@
 
 using namespace std;
 
-void *AMQPConsumer::threadMain(void *pThis) {
+void *AMQPConsumer::ThreadMain(void *pThis) {
   AMQPConsumer *pt = static_cast<AMQPConsumer*>(pThis);
-
-  pt->connect();
-
+  
+  pt->Connect();
+ 
   while(1) {
-    pt->consume();
+    pt->Consume(); 
   }
 
   return NULL;
@@ -21,23 +21,25 @@ AMQPConsumer::AMQPConsumer() {
 
 AMQPConsumer::~AMQPConsumer() {
   DLOG(INFO) << "AMQPConsumer destructor called.";
-  pthread_cancel(thread);
+  pthread_cancel(_thread);
 }
 
-void AMQPConsumer::start(string host, int port, string user, string password, 
-  string routingkey, void(*callback)(void*, string), void* callbackArg) {
+void AMQPConsumer::Start(string host, int port, string user, string password, string exchange, 
+    string routingkey, void(*callback)(void*, string, string), void* callbackArg) {
+
   this->host = host;
   this->port = port;
   this->user = user;
   this->password = password;
+  this->exchange = exchange;
   this->routingkey = routingkey;
   this->callback = callback;
   this->callbackArg = callbackArg; 
 
-    pthread_create(&thread, NULL, &AMQPConsumer::threadMain, this);
+  pthread_create(&_thread, NULL, &AMQPConsumer::ThreadMain, this);
 }
 
-bool AMQPConsumer::connect() {
+bool AMQPConsumer::Connect() {
   int ret;
 
   // Initialize connection.
@@ -66,17 +68,16 @@ bool AMQPConsumer::connect() {
   LOG_IF(FATAL, amqpQueueName.bytes == NULL) << "Out memory while copying queue name";
 
   // Bind queue.
-  amqp_queue_bind(amqpConn, 1, amqpQueueName, amqp_cstring_bytes("amq.fanout"), 
+  amqp_queue_bind(amqpConn, 1, amqpQueueName, amqp_cstring_bytes(exchange.c_str()), 
     amqp_cstring_bytes(routingkey.c_str()), amqp_empty_table);
 
   LOG_IF(FATAL, amqp_get_rpc_reply(amqpConn).reply_type != AMQP_RESPONSE_NORMAL) << "Failed to bind to queue.";
-
   DLOG(INFO) << "Bound to queue " << (char*)amqpQueueName.bytes;
 
   return true;
 }
 
-void AMQPConsumer::consume() {
+void AMQPConsumer::Consume() {
   amqp_envelope_t envelope;
   amqp_rpc_reply_t ret;
 
@@ -92,8 +93,10 @@ void AMQPConsumer::consume() {
     LOG(ERROR) << "Error consuming message.";
   } else {
    string msg;
+   string key;
    msg.insert(0, (const char*)envelope.message.body.bytes, envelope.message.body.len);
-   callback(callbackArg, msg);
+   key.insert(0, (const char*)envelope.routing_key.bytes, envelope.routing_key.len);
+   callback(callbackArg, key, msg);
   }
 
   amqp_destroy_envelope(&envelope);

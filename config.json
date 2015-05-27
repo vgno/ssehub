@@ -6,20 +6,9 @@
   },
   "amqp": {
     "host": "127.0.0.1",
-    "port": 5672 
-  },
-  "channels": {
-     "vglive": {
-      "queueName": "vglive",
-      "user": "guest",
-      "password": "guest",
-      "pingInterval": 10
-    },
-    "vgdirekte": {
-     "queueName": "vgdirekte",
-     "user": "guest",
-     "password": "guest",
-     "pingInterval": 10
-    }
+    "port": 5672,
+    "user": "guest",
+    "password": "guest",
+    "exchange": "amq.fanout"
   }
 }

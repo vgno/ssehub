@@ -2,6 +2,7 @@
 #define SERVER_H
 #include "SSEConfig.h"
 #include "SSEChannel.h"
+#include "AMQPConsumer.h"
 #include <glog/logging.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -22,6 +23,7 @@ class SSEServer {
   public:
     SSEServer(SSEConfig*);
     ~SSEServer();
+    
     void run();
     static void *routerThreadMain(void *);
     string getUri(const char *);
@@ -29,15 +31,18 @@ class SSEServer {
   private:
     SSEConfig *config;
     SSEChannelList channels;
+    AMQPConsumer amqp;
     int serverSocket;
     int efd;
     struct epoll_event *eventList;
     struct sockaddr_in sin;
     pthread_t routerThread;
+    
     void initSocket();
-    void initChannels();
     void acceptLoop();
     void clientRouterLoop();
+    static void amqpCallbackWrapper(void *, const string, const string);
+    void amqpCallback(string, string);
     SSEChannel* getChannel(string id);
 };
 

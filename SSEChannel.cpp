@@ -3,34 +3,25 @@
 
 using namespace std;
 
-SSEChannel::SSEChannel(SSEChannelConfig conf) {
-  this->config = conf;
-  DLOG(INFO) << "Initializing channel " << config.ID;
-
-  amqp.start(config.amqpHost, config.amqpPort, config.amqpUser, 
-    config.amqpPassword, config.amqpQueue, SSEChannel::amqpCallbackWrapper, this);
+SSEChannel::SSEChannel(string id) {
+  this->id = id;
+  DLOG(INFO) << "Initializing channel " << id;
 } 
 
 SSEChannel::~SSEChannel() {
   DLOG(INFO) << "SSEChannel destructor called.";
 }
 
-void SSEChannel::amqpCallbackWrapper(void* pThis, const string msg) {
-  SSEChannel* pt = static_cast<SSEChannel *>(pThis);
-
-  pt->amqpCallback(msg);
-}
-
-void SSEChannel::amqpCallback(string msg) {
-  LOG(INFO) << config.amqpQueue << ": " << msg;
-}
-
 string SSEChannel::getID() {
-  return config.ID;
+  return id;
 }
 
 void SSEChannel::addClient(int fd) {
   LOG(INFO) << "Adding client to channel " << getID();
   close(fd);
+}
+
+void SSEChannel::broadcast(SSEvent event) {
+  LOG(INFO) << "Channel " << id << ": " << "[" << event.id << "] " << event.data;
 }
 

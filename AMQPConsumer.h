@@ -15,23 +15,25 @@ class AMQPConsumer {
     AMQPConsumer();
     ~AMQPConsumer();
 
-    void start(string host, int port, string user, string password, string routingkey, void(*callback)(void*, string), void* callbackArg);
-    bool connect();
-    void consume();
-    static void *threadMain(void*);
+    void Start(string host, int port, string user, string password, string exchange, string routingkey, void(*callback)(void*, string, string), void* callbackArg);
+    bool Connect();
+    void Consume();
+    static void *ThreadMain(void*);
 
   private:
+    pthread_t _thread;
     string host;
     string user;
     string password;
+    string exchange;
     string routingkey;
     int port;
-    pthread_t thread;
-    void(*callback)(void*, string);
     void *callbackArg;
     amqp_socket_t *amqpSocket;
     amqp_connection_state_t amqpConn;
     amqp_bytes_t amqpQueueName;
+
+    void(*callback)(void*, string, string);
 };
 
 #endif
