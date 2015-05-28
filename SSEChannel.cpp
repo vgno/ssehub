@@ -12,16 +12,16 @@ SSEChannel::~SSEChannel() {
   DLOG(INFO) << "SSEChannel destructor called.";
 }
 
-string SSEChannel::getID() {
+string SSEChannel::GetId() {
   return id;
 }
 
-void SSEChannel::addClient(int fd) {
-  LOG(INFO) << "Adding client to channel " << getID();
+void SSEChannel::AddClient(int fd) {
+  LOG(INFO) << "Adding client to channel " << GetId();
   close(fd);
 }
 
-void SSEChannel::broadcast(SSEvent event) {
+void SSEChannel::Broadcast(SSEvent event) {
   LOG(INFO) << "Channel " << id << ": " << "[" << event.id << "] " << event.data;
 }
 

@@ -21,9 +21,9 @@ class SSEChannel {
   public:
     SSEChannel(string);
     ~SSEChannel();
-    string getID();
-    void broadcast(SSEvent);
-    void addClient(int);
+    string GetId();
+    void Broadcast(SSEvent);
+    void AddClient(int);
 
   private:
     string id;

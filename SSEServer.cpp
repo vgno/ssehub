@@ -45,7 +45,7 @@ void SSEServer::amqpCallback(string key, string msg) {
   SSEvent ev;
   ev.id = 1337;
   ev.data = msg;
-  ch->broadcast(ev);
+  ch->Broadcast(ev);
 }
 
 string SSEServer::getUri(const char* str) {
@@ -115,7 +115,7 @@ SSEChannel* SSEServer::getChannel(string id) {
   SSEChannelList::iterator it;
 
   for (it = channels.begin(); it != channels.end(); it++) {
-    if (((SSEChannel*)*it)->getID().compare(id) == 0) {
+    if (((SSEChannel*)*it)->GetId().compare(id) == 0) {
       return (SSEChannel*)*it;
     }
   }
@@ -212,7 +212,7 @@ void SSEServer::clientRouterLoop() {
         // substr(1) to remove the /.
         SSEChannel *ch = getChannel(uri.substr(1));
         if (ch != NULL) {
-          ch->addClient(eventList[i].data.fd);
+          ch->AddClient(eventList[i].data.fd);
           epoll_ctl(efd, EPOLL_CTL_DEL, eventList[i].data.fd, NULL);
         } else {
           write(eventList[i].data.fd, "Channel does not exist.\r\n", 25);
