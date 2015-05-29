@@ -24,20 +24,20 @@ SSEServer::~SSEServer() {
   }
 }
 
-void SSEServer::amqpCallbackWrapper(void* pThis, const string key, const string msg) {
+void SSEServer::AmqpCallbackWrapper(void* pThis, const string key, const string msg) {
   SSEServer* pt = static_cast<SSEServer *>(pThis);
-  pt->amqpCallback(key, msg);
+  pt->AmqpCallback(key, msg);
 }
 
-void SSEServer::amqpCallback(string key, string msg) {
+void SSEServer::AmqpCallback(string key, string msg) {
   if (key.empty()) {
     return;
   }
 
-  SSEChannel *ch = getChannel(key);
+  SSEChannel *ch = GetChannel(key);
   
   if (ch == NULL) {
-    channels.push_back(new SSEChannel(key));
+    channels.push_back(new SSEChannel(config, key));
     // We have no clients here yet since this event is the initializer-event, do not broadcast.
     return;    
   }
@@ -48,11 +48,11 @@ void SSEServer::amqpCallback(string key, string msg) {
   ch->Broadcast(ev);
 }
 
-string SSEServer::getUri(const char* str) {
+string SSEServer::GetUri(const char* str, int len) {
   string uri;
 
   if (strncmp("GET ", str, 4) == 0) {
-    uri.insert(0, str, 4, string::npos);
+    uri.insert(0, str, 4, len);
 
     // Do not include data after space.
     uri = uri.substr(0, uri.find(" "));
@@ -70,17 +70,17 @@ string SSEServer::getUri(const char* str) {
   return "";
 }
 
-void SSEServer::run() {
-  initSocket();
+void SSEServer::Run() {
+  InitSocket();
   // initChannels();
   amqp.Start(config->getAmqp().host, config->getAmqp().port, config->getAmqp().user,
-      config->getAmqp().password, "amq.fanout", "", SSEServer::amqpCallbackWrapper, this);
+      config->getAmqp().password, "amq.fanout", "", SSEServer::AmqpCallbackWrapper, this);
 
-  pthread_create(&routerThread, NULL, &SSEServer::routerThreadMain, this);
-  acceptLoop();
+  pthread_create(&routerThread, NULL, &SSEServer::RouterThreadMain, this);
+  AcceptLoop();
 }
 
-void SSEServer::initSocket() {
+void SSEServer::InitSocket() {
   int on = 1;
 
   /* Ignore SIGPIPE. */
@@ -111,7 +111,7 @@ void SSEServer::initSocket() {
   LOG_IF(FATAL, eventList == NULL) << "Could not allocate memory for epoll eventlist.";
 }
 
-SSEChannel* SSEServer::getChannel(string id) {
+SSEChannel* SSEServer::GetChannel(const string id) {
   SSEChannelList::iterator it;
 
   for (it = channels.begin(); it != channels.end(); it++) {
@@ -123,7 +123,7 @@ SSEChannel* SSEServer::getChannel(string id) {
   return NULL;
 }
 
-void SSEServer::acceptLoop() {
+void SSEServer::AcceptLoop() {
   while(!stop) {
     struct sockaddr_in csin;
     socklen_t clen;
@@ -172,16 +172,16 @@ void SSEServer::acceptLoop() {
   }
 }
 
-void *SSEServer::routerThreadMain(void *pThis) {
+void *SSEServer::RouterThreadMain(void *pThis) {
   SSEServer *srv = static_cast<SSEServer*>(pThis);
-  srv->clientRouterLoop();
+  srv->ClientRouterLoop();
   return NULL;
 }
 
 /*
 * Read request and route client to the requested channel.
 */
-void SSEServer::clientRouterLoop() {
+void SSEServer::ClientRouterLoop() {
   int i, n;
   char buf[512];
   string uri;
@@ -203,14 +203,14 @@ void SSEServer::clientRouterLoop() {
 
        /* Read from client. */
       int len = read(eventList[i].data.fd, &buf, 512);
-      uri = getUri(buf);
+      uri = GetUri(buf, len);
       DLOG(INFO) << "Read " << len << " bytes from client: " << buf;
 
       if (!uri.empty()) {
         DLOG(INFO) << "CHANNEL:" << uri.substr(1) << ".";
 
         // substr(1) to remove the /.
-        SSEChannel *ch = getChannel(uri.substr(1));
+        SSEChannel *ch = GetChannel(uri.substr(1));
         if (ch != NULL) {
           ch->AddClient(eventList[i].data.fd);
           epoll_ctl(efd, EPOLL_CTL_DEL, eventList[i].data.fd, NULL);

@@ -24,9 +24,9 @@ class SSEServer {
     SSEServer(SSEConfig*);
     ~SSEServer();
     
-    void run();
-    static void *routerThreadMain(void *);
-    string getUri(const char *);
+    void Run();
+    static void *RouterThreadMain(void *);
+    string GetUri(const char *, int len);
 
   private:
     SSEConfig *config;
@@ -38,12 +38,12 @@ class SSEServer {
     struct sockaddr_in sin;
     pthread_t routerThread;
     
-    void initSocket();
-    void acceptLoop();
-    void clientRouterLoop();
-    static void amqpCallbackWrapper(void *, const string, const string);
-    void amqpCallback(string, string);
-    SSEChannel* getChannel(string id);
+    void InitSocket();
+    void AcceptLoop();
+    void ClientRouterLoop();
+    static void AmqpCallbackWrapper(void *, const string, const string);
+    void AmqpCallback(string, string);
+    SSEChannel* GetChannel(const string id);
 };
 
 #endif

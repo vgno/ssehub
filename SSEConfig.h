@@ -9,7 +9,8 @@ struct SSEServerConfig {
   int port;
   string bindIP;
   string logDir;
-  int     pingInterval;
+  int    pingInterval;
+  int    threadsPerChannel;
 };
 
 struct SSEAmqpConfig {

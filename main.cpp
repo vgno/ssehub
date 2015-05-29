@@ -30,7 +30,7 @@ int main(int argc, char **argv) {
   SSEConfig conf(DEFAULT_CONFIG_FILE);
   SSEServer server(&conf);
 
-  server.run();
+  server.Run();
 
   return 0;
 }

@@ -22,9 +22,11 @@ bool SSEConfig::load(const char *file) {
     cJSON *server = cJSON_GetObjectItem(json, "server");
     cJSON *amqp = cJSON_GetObjectItem(json, "amqp");
 
-    serverConfig.port   = cJSON_GetObjectItem(server, "port")->valueint;
-    serverConfig.bindIP = cJSON_GetObjectItem(server, "bind-ip")->valuestring;
-    serverConfig.logDir = cJSON_GetObjectItem(server, "logDir")->valuestring;
+    serverConfig.port              = cJSON_GetObjectItem(server, "port")->valueint;
+    serverConfig.bindIP            = cJSON_GetObjectItem(server, "bind-ip")->valuestring;
+    serverConfig.logDir            = cJSON_GetObjectItem(server, "logDir")->valuestring;
+    serverConfig.threadsPerChannel = cJSON_GetObjectItem(server, "threadsPerChannel")->valueint;
+    serverConfig.pingInterval      = cJSON_GetObjectItem(server, "pingInterval")->valueint;
 
     amqpConfig.host         = cJSON_GetObjectItem(amqp, "host")->valuestring;
     amqpConfig.port         = cJSON_GetObjectItem(amqp, "port")->valueint;
