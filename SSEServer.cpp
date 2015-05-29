@@ -4,10 +4,17 @@
 
 using namespace std;
 
+/**
+  Constructor.
+  @param config Pointer to SSEConfig object holding our configuration.
+*/
 SSEServer::SSEServer(SSEConfig *config) {
   this->config = config;
 }
 
+/**
+  Destructor.
+*/
 SSEServer::~SSEServer() {
   vector<SSEChannel*>::iterator it;
 
@@ -24,11 +31,22 @@ SSEServer::~SSEServer() {
   }
 }
 
+/**
+  Wrapper function for AmqpCallback to satisfy the function-type pthread expects.
+  @param pThis pointer to SSEServer instance.
+  @param key AMQP routingkey,
+  @param msg AMQP message.
+*/
 void SSEServer::AmqpCallbackWrapper(void* pThis, const string key, const string msg) {
   SSEServer* pt = static_cast<SSEServer *>(pThis);
   pt->AmqpCallback(key, msg);
 }
 
+/**
+  AMQP callback function that will be called when a message arrives.
+  @param key AMQP routingkey,
+  @param msg AMQP message.
+*/
 void SSEServer::AmqpCallback(string key, string msg) {
   if (key.empty()) {
     return;
@@ -42,12 +60,14 @@ void SSEServer::AmqpCallback(string key, string msg) {
     return;    
   }
 
-  SSEvent ev;
-  ev.id = 1337;
-  ev.data = msg;
-  ch->Broadcast(ev);
+  ch->Broadcast(msg);
 }
 
+/**
+  Parse HTTP request and return URI.
+  @param str HTTP request data.
+  @param len length of data.
+*/
 string SSEServer::GetUri(const char* str, int len) {
   string uri;
 
@@ -70,9 +90,11 @@ string SSEServer::GetUri(const char* str, int len) {
   return "";
 }
 
+/**
+  Start the server.
+*/
 void SSEServer::Run() {
   InitSocket();
-  // initChannels();
   amqp.Start(config->getAmqp().host, config->getAmqp().port, config->getAmqp().user,
       config->getAmqp().password, "amq.fanout", "", SSEServer::AmqpCallbackWrapper, this);
 
@@ -80,6 +102,9 @@ void SSEServer::Run() {
   AcceptLoop();
 }
 
+/**
+  Initialize server socket.
+*/
 void SSEServer::InitSocket() {
   int on = 1;
 
@@ -111,6 +136,10 @@ void SSEServer::InitSocket() {
   LOG_IF(FATAL, eventList == NULL) << "Could not allocate memory for epoll eventlist.";
 }
 
+/**
+  Get instance pointer to SSEChannel object from id if it exists.
+  @param The id/path of the channel you want to get a instance pointer to.
+*/
 SSEChannel* SSEServer::GetChannel(const string id) {
   SSEChannelList::iterator it;
 
@@ -123,6 +152,9 @@ SSEChannel* SSEServer::GetChannel(const string id) {
   return NULL;
 }
 
+/**
+  Accept new client connections.
+*/
 void SSEServer::AcceptLoop() {
   while(!stop) {
     struct sockaddr_in csin;
@@ -172,14 +204,18 @@ void SSEServer::AcceptLoop() {
   }
 }
 
+/**
+  Wrapper function for ClientRouterLoop to satisfy the function-type pthread expects.
+  @param pThis Pointer to the running SSEServer instance.
+*/
 void *SSEServer::RouterThreadMain(void *pThis) {
   SSEServer *srv = static_cast<SSEServer*>(pThis);
   srv->ClientRouterLoop();
   return NULL;
 }
 
-/*
-* Read request and route client to the requested channel.
+/**
+  Read request and route client to the requested channel.
 */
 void SSEServer::ClientRouterLoop() {
   int i, n;

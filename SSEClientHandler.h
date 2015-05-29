@@ -7,15 +7,14 @@
 
 using namespace std;
 
-typedef vector<SSEClientPtr*> SSEClientList;
-
 class SSEClientHandler {
   public:
     SSEClientHandler(int);
     ~SSEClientHandler();
 
     void AddClient(int fd);
-    void Broadcast(string msg);
+    bool RemoveClient(SSEClient* client);
+    void Broadcast(const string& msg);
     void StopThread();
 
   private:
@@ -26,7 +25,7 @@ class SSEClientHandler {
     pthread_cond_t broadcast_cond;
     pthread_mutex_t broadcast_mutex;
     string broadcast_buffer;
-    //SSEClientList client_list;
+    SSEClientPtrList client_list;
 
     static void *ThreadMain(void*);  
     void ThreadMainFunc();

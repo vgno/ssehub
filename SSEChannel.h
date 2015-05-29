@@ -7,6 +7,7 @@
 #include <amqp_tcp_socket.h>
 #include <amqp.h>
 #include <amqp_framing.h>
+#include <pthread.h>
 #include "SSEConfig.h"
 #include "AMQPConsumer.h"
 #include "SSEClientHandler.h"
@@ -25,18 +26,22 @@ class SSEChannel {
     SSEChannel(SSEConfig*, string);
     ~SSEChannel();
     string GetId();
-    void Broadcast(SSEvent);
     void AddClient(int);
+    void Broadcast(const string& data);
+    void BroadcastEvent(SSEvent);
 
   private:
     string id;
     ClientHandlerList::iterator curthread;
     SSEConfig *config;
+    pthread_t _pingthread;
     vector<SSEvent> event_history;
     ClientHandlerList clientpool;
 
     void InitializeThreads();
     void CleanupThreads();
+    void Ping();
+    static void* PingThread(void*);
 };
 
 #endif

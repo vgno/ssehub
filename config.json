@@ -3,8 +3,8 @@
     "port": 8090,
     "bind-ip": "0.0.0.0",
     "logdir": "./",
-    "pingInterval": 3,
-    "threadsPerChannel": 4
+    "pingInterval": 1,
+    "threadsPerChannel": 1
   },
   "amqp": {
     "host": "127.0.0.1",
