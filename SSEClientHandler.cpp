@@ -72,7 +72,6 @@ void SSEClientHandler::ThreadMainFunc() {
   }
 }
 
-
 /**
   Add client to pool.
   @param fd Socket file descriptor.
