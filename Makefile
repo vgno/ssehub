@@ -7,8 +7,8 @@ EXECUTABLE=ssehub
 
 override CFLAGS+=-Wall
 
-DEPS = lib/cJSON/cJSON.h SSEClient.h SSEClientHandler.h SSEChannel.h SSEServer.h SSEConfig.h AMQPConsumer.h SSEEvent.h
-_OBJ = lib/cJSON/cJSON.o SSEClient.o SSEClientHandler.o SSEChannel.o SSEServer.o SSEConfig.o AMQPConsumer.o SSEEvent.o main.o
+DEPS = lib/cJSON/cJSON.h lib/picohttpparser/picohttpparser.h SSEClient.h SSEClientHandler.h SSEChannel.h HTTPRequest.h SSEServer.h SSEConfig.h AMQPConsumer.h SSEEvent.h
+_OBJ = lib/cJSON/cJSON.o lib/picohttpparser/picohttpparser.o SSEClient.o SSEClientHandler.o SSEChannel.o HTTPRequest.o SSEServer.o SSEConfig.o AMQPConsumer.o SSEEvent.o main.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.cpp $(DEPS)
