@@ -1,6 +1,6 @@
 # vim: set noet
 LIBS=-lpthread -lglog -lrabbitmq
-INC=-I/usr/include/boost148
+INC=-I/usr/include/boost
 CC=g++
 ODIR=.
 EXECUTABLE=ssehub

@@ -13,10 +13,17 @@ class HTTPRequest {
   public:
     HTTPRequest(const char *data, int len);
     ~HTTPRequest();
+    bool Parse(const char *data, int len);
+    bool Success();
+    const string& GetPath();
+    const string& GetMethod();
+    const map<string, string>& GetHeaders();
 
   private:
    int http_minor_version;
+   bool b_success;
    string path;
+   string method;
    map<string, string> headers;
    map<string, string> query_parameters;
 };
