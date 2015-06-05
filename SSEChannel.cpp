@@ -12,7 +12,7 @@ SSEChannel::SSEChannel(SSEConfig* conf, string id) {
   this->id = id;
   this->config = conf;
   DLOG(INFO) << "Initializing channel " << id;
-  DLOG(INFO) << "Threads per channel: " << config->getServer().threadsPerChannel;
+  DLOG(INFO) << "Threads per channel: " << config->GetValue("server.threadsPerChannel");
   InitializeThreads();
 }
 
@@ -31,7 +31,7 @@ SSEChannel::~SSEChannel() {
 void SSEChannel::InitializeThreads() {
   int i;
 
-  for (i = 0; i < config->getServer().threadsPerChannel; i++) {
+  for (i = 0; i < config->GetValueInt("server.threadsPerChannel"); i++) {
     clientpool.push_back(new SSEClientHandler(i));
   }
 
@@ -95,7 +95,7 @@ void SSEChannel::BroadcastEvent(SSEvent event) {
 }
 
 /**
-  Weapper function for Ping.
+  Wrapper function for Ping.
 */
 void *SSEChannel::PingThread(void *pThis) {
   SSEChannel *pt = static_cast<SSEChannel*>(pThis);
@@ -111,6 +111,6 @@ void SSEChannel::Ping() {
   
   while(1) {
     Broadcast(":\n");
-    sleep(config->getServer().pingInterval);
+    sleep(config->GetValueInt("server.pingInterval"));
   }
 }

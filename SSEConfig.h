@@ -1,36 +1,20 @@
 #ifndef CONFIG_H
 #define CONFIG_H
-#include <vector>
+#include <map>
 #include <string>
 
 using namespace std;
-
-struct SSEServerConfig {
-  int port;
-  string bindIP;
-  string logDir;
-  int    pingInterval;
-  int    threadsPerChannel;
-};
-
-struct SSEAmqpConfig {
-  string  host;
-  string  exchange;
-  string  user;
-  string  password;
-  int     port;
-};
 
 class SSEConfig {
   public:
     bool load(const char*);
     SSEConfig(string);
-    SSEServerConfig& getServer();
-    SSEAmqpConfig& getAmqp();
+    const string &GetValue(const string& key);
+    int GetValueInt(const string& key);
 
   private:
-    SSEServerConfig serverConfig;
-    SSEAmqpConfig   amqpConfig;
+    void InitDefaults();
+    map<string, string> ConfigKeys;
 };
 
 #endif

@@ -1,56 +1,84 @@
 #include "SSEConfig.h" 
-#include "lib/cJSON/cJSON.h"
 #include <glog/logging.h>
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <stdlib.h>
+#include <exception>
+#include <boost/algorithm/string.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 using namespace std;
 
+/**
+  Constructor.
+*/
+SSEConfig::SSEConfig(string file) {
+  InitDefaults();
+  load(file.c_str());
+}
+
+/**
+  Initialize some sane default config values.
+*/
+void SSEConfig::InitDefaults() {
+
+ ConfigKeys["server.bindip"]             = "0.0.0.0";
+ ConfigKeys["server.port"]               = "8090";
+ ConfigKeys["server.logdir"]             = "./";
+ ConfigKeys["server.pingInterval"]       = "5";
+ ConfigKeys["server.threadsPerChannel"]  = "5";
+
+
+ ConfigKeys["amqp.host"]                 = "127.0.0.1";
+ ConfigKeys["amqp.port"]                 = "5672";
+ ConfigKeys["amqp.user"]                 = "guest";
+ ConfigKeys["amqp.password"]             = "guest";
+ ConfigKeys["amqp.exchange"]             = "amq.fanout";
+
+}
+
+/**
+  Load a config file.
+  @param file Filename of config to load. 
+*/
 bool SSEConfig::load(const char *file) {
-  ifstream ifs(file);
-  cJSON *json;
+    boost::property_tree::ptree pt;
 
-  if (ifs.is_open()) {
-    stringstream ss;
-    ss << ifs.rdbuf();
-    ifs.close();
+    try {
+      boost::property_tree::read_json(file, pt);
+    } catch (...) {
+      LOG(FATAL) << "Failed to parse config file.";
+      return false;
+    }  
 
-    json = cJSON_Parse(ss.str().c_str());
+    map<string, string>::iterator it;
 
-    cJSON *server = cJSON_GetObjectItem(json, "server");
-    cJSON *amqp = cJSON_GetObjectItem(json, "amqp");
-
-    serverConfig.port              = cJSON_GetObjectItem(server, "port")->valueint;
-    serverConfig.bindIP            = cJSON_GetObjectItem(server, "bind-ip")->valuestring;
-    serverConfig.logDir            = cJSON_GetObjectItem(server, "logDir")->valuestring;
-    serverConfig.threadsPerChannel = cJSON_GetObjectItem(server, "threadsPerChannel")->valueint;
-    serverConfig.pingInterval      = cJSON_GetObjectItem(server, "pingInterval")->valueint;
-
-    amqpConfig.host         = cJSON_GetObjectItem(amqp, "host")->valuestring;
-    amqpConfig.port         = cJSON_GetObjectItem(amqp, "port")->valueint;
-    amqpConfig.user         = cJSON_GetObjectItem(amqp, "user")->valuestring;
-    amqpConfig.password     = cJSON_GetObjectItem(amqp, "password")->valuestring;
-    amqpConfig.exchange     = cJSON_GetObjectItem(amqp, "exchange")->valuestring;
-
-    cJSON_Delete(json);
-  } else {
-    LOG(FATAL) << "Error opening configfile " << file;
-    exit(1);
-  }
+    for (it = ConfigKeys.begin(); it != ConfigKeys.end();  it++) {
+      try {
+        string val = pt.get<std::string>(it->first);
+        ConfigKeys[it->first] = val;
+        DLOG(INFO) << it->first << " = " << ConfigKeys[it->first];
+      } catch (...) {}
+    }
 
   return true;
 }
 
-SSEServerConfig& SSEConfig::getServer() {
-  return serverConfig;
+/**
+  Fetch a config attribute and return as a string.
+  @param key Config attribute to fetch. 
+*/
+const string &SSEConfig::GetValue(const string& key) {
+  return ConfigKeys[key];
 }
 
-SSEAmqpConfig& SSEConfig::getAmqp() {
-  return amqpConfig;
-}
-
-SSEConfig::SSEConfig(string file) {
-  load(file.c_str());
+/**
+  Fetch a config attribute and return as a int.
+  @param key Config attribute to fetch. 
+*/
+int SSEConfig::GetValueInt(const string& key) {
+  // FIXME: Probably better to use something else than atoi().
+  return atoi(ConfigKeys[key].c_str());
 }

@@ -1,6 +1,6 @@
 {
   "server": {
-    "port": 8090,
+    "port": 8080,
     "bind-ip": "0.0.0.0",
     "logdir": "./",
     "pingInterval": 1,

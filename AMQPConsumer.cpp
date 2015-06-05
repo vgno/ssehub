@@ -3,6 +3,10 @@
 
 using namespace std;
 
+/**
+  Wrapper function used by ptrhead to run our Consume() function.
+  @param pThis Pointer to AMQPConsumer instance object.
+*/
 void *AMQPConsumer::ThreadMain(void *pThis) {
   AMQPConsumer *pt = static_cast<AMQPConsumer*>(pThis);
   
@@ -15,17 +19,42 @@ void *AMQPConsumer::ThreadMain(void *pThis) {
   return NULL;
 }
 
+/**
+  Constructor.
+*/
 AMQPConsumer::AMQPConsumer() {
 
 }
 
+/**
+  Destructor.
+*/
 AMQPConsumer::~AMQPConsumer() {
   DLOG(INFO) << "AMQPConsumer destructor called.";
   pthread_cancel(_thread);
 }
 
+/**
+  Start consume.
+  @param host Hostname of amqp server.
+  @param port port of amqp server.
+  @param user amqp username.
+  @param password amqp password.
+  @param exchange amqp exchange.
+  @param routingkey amqp routingkey.
+  @param callback callback function.
+  @param callbackArg argument for callback function.
+*/
 void AMQPConsumer::Start(string host, int port, string user, string password, string exchange, 
     string routingkey, void(*callback)(void*, string, string), void* callbackArg) {
+
+  DLOG(INFO)         << "AMQPConsumer::Start():" << 
+    " host: "        << host <<
+    " port: "        << port <<
+    " user: "        << user <<
+    " password: "    << password <<
+    " exchange: "    << exchange <<
+    " routingkey: "  << routingkey;
 
   this->host = host;
   this->port = port;
@@ -39,6 +68,9 @@ void AMQPConsumer::Start(string host, int port, string user, string password, st
   pthread_create(&_thread, NULL, &AMQPConsumer::ThreadMain, this);
 }
 
+/**
+  Connect to AMQP server.
+*/
 bool AMQPConsumer::Connect() {
   int ret;
 
@@ -77,6 +109,9 @@ bool AMQPConsumer::Connect() {
   return true;
 }
 
+/**
+  Start consumption from AMQP server.
+*/
 void AMQPConsumer::Consume() {
   amqp_envelope_t envelope;
   amqp_rpc_reply_t ret;

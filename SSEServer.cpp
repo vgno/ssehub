@@ -96,8 +96,11 @@ string SSEServer::GetUri(const char* str, int len) {
 */
 void SSEServer::Run() {
   InitSocket();
-  amqp.Start(config->getAmqp().host, config->getAmqp().port, config->getAmqp().user,
-      config->getAmqp().password, "amq.fanout", "", SSEServer::AmqpCallbackWrapper, this);
+
+  amqp.Start(config->GetValue("amqp.host"), config->GetValueInt("amqp.port"), 
+      config->GetValue("amqp.user"),config->GetValue("amqp.password"), 
+      config->GetValue("amqp.exchange"), "", 
+      SSEServer::AmqpCallbackWrapper, this);
 
   pthread_create(&routerThread, NULL, &SSEServer::RouterThreadMain, this);
   AcceptLoop();
@@ -121,14 +124,14 @@ void SSEServer::InitSocket() {
 
   memset((char*)&sin, '\0', sizeof(sin));
   sin.sin_family  = AF_INET;
-  sin.sin_port  = htons(config->getServer().port);
+  sin.sin_port  = htons(config->GetValueInt("server.port"));
 
   LOG_IF(FATAL, (bind(serverSocket, (struct sockaddr*)&sin, sizeof(sin))) == -1) <<
-    "Could not bind server socket to " << config->getServer().bindIP << ":" << config->getServer().port;
+    "Could not bind server socket to " << config->GetValue("server.bindip") << ":" << config->GetValue("server.port");
 
   LOG_IF(FATAL, (listen(serverSocket, 0)) == -1) << "Call to listen() failed.";
 
-  LOG(INFO) << "Listening on " << config->getServer().bindIP << ":" << config->getServer().port;
+  LOG(INFO) << "Listening on " << config->GetValue("server.bindip")  << ":" << config->GetValue("server.port");
 
   efd = epoll_create1(0);
   LOG_IF(FATAL, efd == -1) << "epoll_create1 failed.";
