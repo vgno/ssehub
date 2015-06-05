@@ -17,6 +17,9 @@ $(ODIR)/%.o: %.cpp $(DEPS)
 $(EXECUTABLE): $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
+docker: clean
+	docker build -t ssehub .
+
 clean:
 	rm -f $(OBJ) $(EXECUTABLE)
 
