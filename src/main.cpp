@@ -4,7 +4,7 @@
 #include "SSEConfig.h"
 #include "SSEServer.h"
 
-#define DEFAULT_CONFIG_FILE "config.json"
+#define DEFAULT_CONFIG_FILE "./conf/config.json"
 
 using namespace std;
 

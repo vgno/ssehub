@@ -1,14 +1,14 @@
 # vim: set noet
 LIBS=-lpthread -lglog -lrabbitmq
-INC=-I/usr/include/boost
+INC=-I/usr/include/boost -I./includes
 CC=g++
 ODIR=.
 EXECUTABLE=ssehub
 
 override CFLAGS+=-Wall
 
-DEPS = lib/picohttpparser/picohttpparser.h SSEClient.h SSEClientHandler.h SSEChannel.h HTTPRequest.h SSEServer.h SSEConfig.h AMQPConsumer.h SSEEvent.h
-_OBJ = lib/picohttpparser/picohttpparser.o SSEClient.o SSEClientHandler.o SSEChannel.o HTTPRequest.o SSEServer.o SSEConfig.o AMQPConsumer.o SSEEvent.o main.o
+DEPS = lib/picohttpparser/picohttpparser.h includes/SSEClient.h includes/SSEClientHandler.h includes/SSEChannel.h includes/HTTPRequest.h includes/SSEServer.h includes/SSEConfig.h includes/AMQPConsumer.h includes/SSEEvent.h
+_OBJ = lib/picohttpparser/picohttpparser.o src/SSEClient.o src/SSEClientHandler.o src/SSEChannel.o src/HTTPRequest.o src/SSEServer.o src/SSEConfig.o src/AMQPConsumer.o src/SSEEvent.o src/main.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: %.cpp $(DEPS)
