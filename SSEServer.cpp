@@ -1,4 +1,5 @@
 #include "SSEServer.h"
+#include "HTTPRequest.h"
 #include <iostream>
 #include <stdlib.h>
 
@@ -241,7 +242,7 @@ void SSEServer::ClientRouterLoop() {
       int len = read(eventList[i].data.fd, &buf, 512);
       uri = GetUri(buf, len);
       DLOG(INFO) << "Read " << len << " bytes from client: " << buf;
-
+      
       if (!uri.empty()) {
         DLOG(INFO) << "CHANNEL:" << uri.substr(1) << ".";
 
