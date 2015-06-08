@@ -12,7 +12,7 @@ class SSEClientHandler {
     SSEClientHandler(int);
     ~SSEClientHandler();
 
-    void AddClient(int fd);
+    void AddClient(SSEClient* client);
     bool RemoveClient(SSEClient* client);
     void Broadcast(const string& msg);
     void StopThread();

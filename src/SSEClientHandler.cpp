@@ -74,20 +74,19 @@ void SSEClientHandler::ThreadMainFunc() {
 
 /**
   Add client to pool.
-  @param fd Socket file descriptor.
+  @param client SSEClient pointer.
 */
-void SSEClientHandler::AddClient(int fd) {
+void SSEClientHandler::AddClient(SSEClient* client) {
   int ret;
   struct epoll_event ev;
 
-  SSEClient* client = new SSEClient(fd);
   client_list.push_back(client);
 
-  ev.data.fd  = fd;
+  ev.data.fd  = client->Getfd();
   ev.events   = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLET;
   ev.data.ptr = client;
 
-  ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev);
+  ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client->Getfd(), &ev);
   DLOG_IF(ERROR, ret == -1) << "Failed to add client to epoll event list.";
  
   num_clients++;

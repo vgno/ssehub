@@ -17,6 +17,7 @@ class SSEClient {
     int Send(const string &data);
     const string Recv(int len);
     boost::uuids::uuid GetId();
+    int Getfd();
 
   private:
     boost::uuids::uuid uuid;

@@ -11,6 +11,7 @@
 #include "SSEConfig.h"
 #include "AMQPConsumer.h"
 #include "SSEClientHandler.h"
+#include "SSEClient.h"
 
 using namespace std;
 
@@ -26,7 +27,7 @@ class SSEChannel {
     SSEChannel(SSEConfig*, string);
     ~SSEChannel();
     string GetId();
-    void AddClient(int);
+    void AddClient(SSEClient* client);
     void Broadcast(const string& data);
     void BroadcastEvent(SSEvent);
 

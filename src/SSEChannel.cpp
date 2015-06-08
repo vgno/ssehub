@@ -64,11 +64,11 @@ string SSEChannel::GetId() {
 /**
   Adds a client to one of the client handlers assigned to the channel.
   Clients is distributed evenly across the client handler threads.
-  @param fd Socker file descriptor of client to add.
+  @param client SSEClient pointer.
 */
-void SSEChannel::AddClient(int fd) {
+void SSEChannel::AddClient(SSEClient* client) {
   DLOG(INFO) << "Adding client to channel " << GetId();
-  (*curthread)->AddClient(fd); 
+  (*curthread)->AddClient(client); 
 
   *curthread++;
   if (curthread == clientpool.end()) curthread = clientpool.begin();

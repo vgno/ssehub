@@ -1,4 +1,5 @@
 #include "SSEServer.h"
+#include "SSEClient.h"
 #include "HTTPRequest.h"
 #include <iostream>
 #include <stdlib.h>
@@ -222,19 +223,19 @@ void SSEServer::ClientRouterLoop() {
       if (!req.Success()) {
         LOG(INFO) << "Invalid HTTP request receieved, shutting down connection.";
         close(eventList[i].data.fd);
+        continue;
       }
 
       if (!req.GetPath().empty()) {
         DLOG(INFO) << "CHANNEL:" << req.GetPath().substr(1) << ".";
-
+        
         // substr(1) to remove the /.
         SSEChannel *ch = GetChannel(req.GetPath().substr(1));
         if (ch != NULL) {
-          ch->AddClient(eventList[i].data.fd);
+          ch->AddClient(new SSEClient(eventList[i].data.fd));
           epoll_ctl(efd, EPOLL_CTL_DEL, eventList[i].data.fd, NULL);
         } else {
           write(eventList[i].data.fd, "Channel does not exist.\r\n", 25);
-          close(eventList[i].data.fd);
         }
       }
     }

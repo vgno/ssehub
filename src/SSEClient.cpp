@@ -17,6 +17,9 @@ SSEClient::~SSEClient() {
   close(fd);
 }
 
+int SSEClient::Getfd() {
+  return fd;
+}
 
 boost::uuids::uuid SSEClient::GetId() {
   return uuid;
