@@ -26,7 +26,6 @@ class SSEServer {
     
     void Run();
     static void *RouterThreadMain(void *);
-    string GetUri(const char *, int len);
 
   private:
     SSEConfig *config;

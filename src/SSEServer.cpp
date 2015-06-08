@@ -65,33 +65,6 @@ void SSEServer::AmqpCallback(string key, string msg) {
 }
 
 /**
-  Parse HTTP request and return URI.
-  @param str HTTP request data.
-  @param len length of data.
-*/
-string SSEServer::GetUri(const char* str, int len) {
-  string uri;
-
-  if (strncmp("GET ", str, 4) == 0) {
-    uri.insert(0, str, 4, len);
-
-    // Do not include data after space.
-    uri = uri.substr(0, uri.find(" "));
-
-    // Do not include newline.
-    int nlpos = uri.find('\n');
-
-    if (nlpos > 0) {
-      uri.erase(nlpos);
-    }
-  
-    return uri;
-  }
-
-  return "";
-}
-
-/**
   Start the server.
 */
 void SSEServer::Run() {
@@ -243,14 +216,19 @@ void SSEServer::ClientRouterLoop() {
 
        /* Read from client. */
       int len = read(eventList[i].data.fd, &buf, 512);
-      uri = GetUri(buf, len);
       DLOG(INFO) << "Read " << len << " bytes from client: " << buf;
-      
-      if (!uri.empty()) {
-        DLOG(INFO) << "CHANNEL:" << uri.substr(1) << ".";
+
+      HTTPRequest req(buf, len);
+      if (!req.Success()) {
+        LOG(INFO) << "Invalid HTTP request receieved, shutting down connection.";
+        close(eventList[i].data.fd);
+      }
+
+      if (!req.GetPath().empty()) {
+        DLOG(INFO) << "CHANNEL:" << req.GetPath().substr(1) << ".";
 
         // substr(1) to remove the /.
-        SSEChannel *ch = GetChannel(uri.substr(1));
+        SSEChannel *ch = GetChannel(req.GetPath().substr(1));
         if (ch != NULL) {
           ch->AddClient(eventList[i].data.fd);
           epoll_ctl(efd, EPOLL_CTL_DEL, eventList[i].data.fd, NULL);
