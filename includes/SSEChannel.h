@@ -2,6 +2,7 @@
 #define CHANNEL_H
 
 #include <vector>
+#include <map>
 #include <string>
 #include <glog/logging.h>
 #include <amqp_tcp_socket.h>
@@ -33,12 +34,16 @@ class SSEChannel {
 
   private:
     string id;
+    string header_data;
+    map<string, string> request_headers;
     ClientHandlerList::iterator curthread;
     SSEConfig *config;
     pthread_t _pingthread;
     vector<SSEvent> event_history;
     ClientHandlerList clientpool;
 
+    void AddResponseHeader(const string& header, const string& val);
+    void CommitHeaderData();
     void InitializeThreads();
     void CleanupThreads();
     void Ping();

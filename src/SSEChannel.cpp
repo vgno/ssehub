@@ -13,6 +13,13 @@ SSEChannel::SSEChannel(SSEConfig* conf, string id) {
   this->config = conf;
   DLOG(INFO) << "Initializing channel " << id;
   DLOG(INFO) << "Threads per channel: " << config->GetValue("server.threadsPerChannel");
+
+  AddResponseHeader("Content-Type", "text/event-stream");
+  AddResponseHeader("Cache-Control", "no-cache");
+  AddResponseHeader("Connection", "keep-alive");
+  AddResponseHeader("Access-Control-Allow-Origin", "*"); // This is temporary.
+  CommitHeaderData();
+
   InitializeThreads();
 }
 
@@ -68,6 +75,13 @@ string SSEChannel::GetId() {
 */
 void SSEChannel::AddClient(SSEClient* client) {
   DLOG(INFO) << "Adding client to channel " << GetId();
+
+  // Send initial response headers, etc.
+  client->Send("HTTP/1.1 200 OK\r\n");
+  client->Send(header_data);
+  client->Send("\r\n\r\n");
+  client->Send(":ok\n\n");
+
   (*curthread)->AddClient(client); 
 
   *curthread++;
@@ -111,4 +125,20 @@ void SSEChannel::Ping() {
     Broadcast(":\n");
     sleep(config->GetValueInt("server.pingInterval"));
   }
+}
+
+void SSEChannel::AddResponseHeader(const string& header, const string& val) {
+  request_headers[header] = val;
+}
+
+void SSEChannel::CommitHeaderData() {
+  stringstream header_data_ss;
+
+  map<string, string>::iterator it;
+
+  for (it = request_headers.begin(); it != request_headers.end(); it++) {
+    header_data_ss << it->first << ": " << it->second << "\r\n"; 
+  }
+
+  header_data = header_data_ss.str();
 }
