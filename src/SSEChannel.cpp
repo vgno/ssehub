@@ -107,8 +107,6 @@ void *SSEChannel::PingThread(void *pThis) {
   Sends a ping to all clients connected to this channel.
 */
 void SSEChannel::Ping() {
-  ClientHandlerList::iterator it;
-  
   while(1) {
     Broadcast(":\n");
     sleep(config->GetValueInt("server.pingInterval"));

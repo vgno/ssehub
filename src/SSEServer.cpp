@@ -198,7 +198,6 @@ void *SSEServer::RouterThreadMain(void *pThis) {
 void SSEServer::ClientRouterLoop() {
   int i, n;
   char buf[512];
-  string uri;
 
   DLOG(INFO) << "Started client router thread.";
 
@@ -213,10 +212,10 @@ void SSEServer::ClientRouterLoop() {
         continue;
       }
 
-      memset(buf, '\0', 512);
-
        /* Read from client. */
       int len = read(eventList[i].data.fd, &buf, 512);
+      buf[len] = '\0';
+
       DLOG(INFO) << "Read " << len << " bytes from client: " << buf;
 
       HTTPRequest req(buf, len);
@@ -236,6 +235,7 @@ void SSEServer::ClientRouterLoop() {
           epoll_ctl(efd, EPOLL_CTL_DEL, eventList[i].data.fd, NULL);
         } else {
           write(eventList[i].data.fd, "Channel does not exist.\r\n", 25);
+          close(eventList[i].data.fd);
         }
       }
     }
