@@ -4,7 +4,8 @@
     "bind-ip": "0.0.0.0",
     "logdir": "./",
     "pingInterval": 5,
-    "threadsPerChannel": 2
+    "threadsPerChannel": 2,
+    "channelCacheSize": 2
   },
   "amqp": {
     "host": "127.0.0.1",

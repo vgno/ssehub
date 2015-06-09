@@ -2,6 +2,7 @@
 #define CHANNEL_H
 
 #include <vector>
+#include <deque>
 #include <map>
 #include <string>
 #include <glog/logging.h>
@@ -13,13 +14,9 @@
 #include "AMQPConsumer.h"
 #include "SSEClientHandler.h"
 #include "SSEClient.h"
+#include "SSEEvent.h"
 
 using namespace std;
-
-struct SSEvent {
-  long id;
-  string data;
-};
 
 typedef vector<SSEClientHandler*> ClientHandlerList;
 
@@ -30,7 +27,8 @@ class SSEChannel {
     string GetId();
     void AddClient(SSEClient* client);
     void Broadcast(const string& data);
-    void BroadcastEvent(SSEvent);
+    void BroadcastEvent(SSEEvent* event);
+    void CacheEvent(SSEEvent* event);
 
   private:
     string id;
@@ -39,7 +37,8 @@ class SSEChannel {
     ClientHandlerList::iterator curthread;
     SSEConfig *config;
     pthread_t _pingthread;
-    vector<SSEvent> event_history;
+    deque<string> cache_keys;
+    map<string, string> cache_data;
     ClientHandlerList clientpool;
 
     void AddResponseHeader(const string& header, const string& val);

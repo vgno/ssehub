@@ -29,6 +29,7 @@ void SSEConfig::InitDefaults() {
  ConfigKeys["server.logdir"]             = "./";
  ConfigKeys["server.pingInterval"]       = "5";
  ConfigKeys["server.threadsPerChannel"]  = "5";
+ ConfigKeys["server.channelCacheSize"]   = "500";
 
 
  ConfigKeys["amqp.host"]                 = "127.0.0.1";

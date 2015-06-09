@@ -9,19 +9,22 @@ SSEEvent::SSEEvent(const string& jsondata) {
   retry = 0;
 }
 
+SSEEvent::~SSEEvent() {
+}
+
 bool SSEEvent::compile() {
   boost::property_tree::ptree pt;
   string indata;
 
   try {
     boost::property_tree::read_json(json_ss, pt);
-    path = pt.get<std::string>("path"); // required.
     indata = pt.get<std::string>("data"); // required.
   } catch (...) {
     return false;
   }  
 
   try {
+    path = pt.get<std::string>("path"); 
     id = pt.get<std::string>("id");
     event = pt.get<std::string>("event");
     retry =  pt.get<int>("retry");
@@ -50,5 +53,16 @@ const string SSEEvent::get() {
     ss << "data: " << *it << endl;
   }
 
+  ss << "\n";
+
   return ss.str(); 
 }
+
+const string SSEEvent::getpath() {
+  return path;
+}
+
+const string SSEEvent::getid() {
+  return id;
+}
+

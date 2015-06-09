@@ -1,6 +1,7 @@
 #include "SSEServer.h"
 #include "SSEClient.h"
 #include "HTTPRequest.h"
+#include "SSEEvent.h"
 #include <iostream>
 #include <stdlib.h>
 
@@ -50,19 +51,29 @@ void SSEServer::AmqpCallbackWrapper(void* pThis, const string key, const string 
   @param msg AMQP message.
 */
 void SSEServer::AmqpCallback(string key, string msg) {
-  if (key.empty()) {
+  SSEEvent* event = new SSEEvent(msg);
+  if (!event->compile()) {
+    free(event);
+    DLOG(ERROR) << "Discarding event with invalid format recieved on " << key;
     return;
   }
 
-  SSEChannel *ch = GetChannel(key);
+  string chname;
+  // If path is set in the JSON event data use that as target channel name.
+  if (!event->getpath().empty()) { chname = event->getpath(); } 
+  // Otherwise use the routingkey.
+  else if (!key.empty())         { chname = key; } 
+  // If none of the is present just return and ignore the message.
+  else                           { return; }
+
+  SSEChannel *ch = GetChannel(chname);
   
   if (ch == NULL) {
-    channels.push_back(new SSEChannel(config, key));
-    // We have no clients here yet since this event is the initializer-event, do not broadcast.
-    return;    
+    ch = new SSEChannel(config, chname);
+    channels.push_back(ch);
   }
 
-  ch->Broadcast(msg);
+  ch->BroadcastEvent(event);
 }
 
 /**

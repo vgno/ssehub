@@ -104,8 +104,34 @@ void SSEChannel::Broadcast(const string& data) {
   Broadcasts SSEvent to all connected clients.
   @param event Event to broadcast.
 */
-void SSEChannel::BroadcastEvent(SSEvent event) {
- DLOG(INFO) << "Channel " << id << ": " << "[" << event.id << "] " << event.data;
+void SSEChannel::BroadcastEvent(SSEEvent* event) {
+  // Add event to cache if it contains a id field.
+  if (!event->getid().empty()) {
+    CacheEvent(event);
+  }
+
+  Broadcast(event->get());
+
+  delete(event);
+}
+
+/**
+  Add event to cache.
+  @param event Event to cache.
+*/
+void SSEChannel::CacheEvent(SSEEvent* event) {
+  if ((int)cache_keys.size() == config->GetValueInt("server.channelCacheSize")) {
+    cache_data.erase(*(cache_keys.begin()));
+    cache_keys.erase(cache_keys.begin());
+  }
+
+  // If we have the event id in our vector already don't remove it.
+  // We want to keep the order even if we get an update on the event.
+  if (std::find(cache_keys.begin(), cache_keys.end(), event->getid()) == cache_keys.end()) {
+    cache_keys.push_back(event->getid());
+  }
+
+  cache_data[event->getid()] = event->get();
 }
 
 /**
@@ -127,10 +153,18 @@ void SSEChannel::Ping() {
   }
 }
 
+/**
+  Add header to response.
+  @param header Header name.
+  @param val Header content.
+*/
 void SSEChannel::AddResponseHeader(const string& header, const string& val) {
   request_headers[header] = val;
 }
 
+/**
+ Composes a string (this->header_data) of the headers added by AddResponseHeader.
+*/
 void SSEChannel::CommitHeaderData() {
   stringstream header_data_ss;
 
