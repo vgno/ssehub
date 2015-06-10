@@ -14,6 +14,14 @@ SSEChannel::SSEChannel(SSEConfig* conf, string id) {
   DLOG(INFO) << "Initializing channel " << id;
   DLOG(INFO) << "Threads per channel: " << config->GetValue("server.threadsPerChannel");
 
+  // Internet Explorer has a problem receiving data when using XDomainRequest before it has received 2KB of data. 
+  // The polyfills that account for this send a query parameter, evs_preamble to inform the server about this so it can respond with some initial data.
+  // Initialize a buffer containing our response for this case.
+  evs_preamble_data[0] = ':';
+  for (int i = 1; i <= 2048; i++) { evs_preamble_data[i] = '.'; }
+  evs_preamble_data[2049] = '\n';
+  evs_preamble_data[2050] = '\0';
+
   AddResponseHeader("Content-Type", "text/event-stream");
   AddResponseHeader("Cache-Control", "no-cache");
   AddResponseHeader("Connection", "keep-alive");
@@ -73,14 +81,24 @@ string SSEChannel::GetId() {
   Clients is distributed evenly across the client handler threads.
   @param client SSEClient pointer.
 */
-void SSEChannel::AddClient(SSEClient* client, const string& lastEventId) {
+void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   DLOG(INFO) << "Adding client to channel " << GetId();
+
+  string lastEventId = req->GetHeader("Last-Event-ID");
+  if (lastEventId.empty()) lastEventId = req->GetQueryString("evs_last_event_id");
+  if (lastEventId.empty()) lastEventId = req->GetQueryString("lastEventId");
+
 
   // Send initial response headers, etc.
   client->Send("HTTP/1.1 200 OK\r\n");
   client->Send(header_data);
   client->Send("\r\n");
   client->Send(":ok\n\n");
+
+  // Send preamble if polyfill requests it.
+  if (!req->GetQueryString("evs_preamble").empty()) {
+    client->Send(evs_preamble_data);
+  }
 
   if (!lastEventId.empty()) {
     SendEventsSince(client, lastEventId);
@@ -90,10 +108,6 @@ void SSEChannel::AddClient(SSEClient* client, const string& lastEventId) {
 
   *curthread++;
   if (curthread == clientpool.end()) curthread = clientpool.begin();
-}
-
-void SSEChannel::AddClient(SSEClient* client) {
-  AddClient(client, "");
 }
 
 /**

@@ -15,6 +15,7 @@
 #include "SSEClientHandler.h"
 #include "SSEClient.h"
 #include "SSEEvent.h"
+#include "HTTPRequest.h"
 
 using namespace std;
 
@@ -25,8 +26,7 @@ class SSEChannel {
     SSEChannel(SSEConfig*, string);
     ~SSEChannel();
     string GetId();
-    void AddClient(SSEClient* client, const string& lastEventId);
-    void AddClient(SSEClient* client);
+    void AddClient(SSEClient* client, HTTPRequest* req);
     void Broadcast(const string& data);
     void BroadcastEvent(SSEEvent* event);
     void CacheEvent(SSEEvent* event);
@@ -43,6 +43,7 @@ class SSEChannel {
     deque<string> cache_keys;
     map<string, SSEEvent*> cache_data;
     ClientHandlerList clientpool;
+    char evs_preamble_data[2050];
 
     void AddResponseHeader(const string& header, const string& val);
     void CommitHeaderData();
