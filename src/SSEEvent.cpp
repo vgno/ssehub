@@ -10,6 +10,7 @@ SSEEvent::SSEEvent(const string& jsondata) {
 }
 
 SSEEvent::~SSEEvent() {
+  LOG(INFO) << "Deleting SSEEvent with id " << id;
 }
 
 bool SSEEvent::compile() {

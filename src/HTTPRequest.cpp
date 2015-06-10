@@ -92,8 +92,12 @@ const string& HTTPRequest::GetMethod() {
   Get a spesific header.
   @param header Header to get.
 **/
-const string& HTTPRequest::GetHeader(const string& header) {
-  return headers[header];
+const string HTTPRequest::GetHeader(const string& header) {
+  if (headers.find(header) != headers.end()) {
+    return headers[header];
+  }
+
+  return "";
 }
 
 const map<string, string>& HTTPRequest::GetHeaders() {
@@ -141,8 +145,12 @@ size_t HTTPRequest::ParseQueryString(const std::string& buf) {
   Get a spesific query string parameter.
   @param param Parameter to get.
 **/
-const string& HTTPRequest::GetQueryString(const std::string& param) {
-  return qsmap[param];
+const string HTTPRequest::GetQueryString(const std::string& param) {
+  if (qsmap.find(param) != qsmap.end()) {
+    return qsmap[param];
+  }
+
+  return "";
 }
 
 /**

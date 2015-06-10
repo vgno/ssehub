@@ -25,10 +25,13 @@ class SSEChannel {
     SSEChannel(SSEConfig*, string);
     ~SSEChannel();
     string GetId();
+    void AddClient(SSEClient* client, const string& lastEventId);
     void AddClient(SSEClient* client);
     void Broadcast(const string& data);
     void BroadcastEvent(SSEEvent* event);
     void CacheEvent(SSEEvent* event);
+    SSEEvent* GetEvent(const string& id);
+    void SendEventsSince(SSEClient* client, string lastId);
 
   private:
     string id;
@@ -38,7 +41,7 @@ class SSEChannel {
     SSEConfig *config;
     pthread_t _pingthread;
     deque<string> cache_keys;
-    map<string, string> cache_data;
+    map<string, SSEEvent*> cache_data;
     ClientHandlerList clientpool;
 
     void AddResponseHeader(const string& header, const string& val);

@@ -242,7 +242,11 @@ void SSEServer::ClientRouterLoop() {
         // substr(1) to remove the /.
         SSEChannel *ch = GetChannel(req.GetPath().substr(1));
         if (ch != NULL) {
-          ch->AddClient(new SSEClient(eventList[i].data.fd));
+          string lastEventId = req.GetHeader("Last-Event-ID");
+          if (lastEventId.empty()) lastEventId = req.GetQueryString("evs_last_event_id");
+          if (lastEventId.empty()) lastEventId = req.GetQueryString("lastEventId");
+
+          ch->AddClient(new SSEClient(eventList[i].data.fd), lastEventId);
           epoll_ctl(efd, EPOLL_CTL_DEL, eventList[i].data.fd, NULL);
         } else {
           write(eventList[i].data.fd, "Channel does not exist.\r\n", 25);

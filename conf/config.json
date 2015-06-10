@@ -5,7 +5,7 @@
     "logdir": "./",
     "pingInterval": 5,
     "threadsPerChannel": 2,
-    "channelCacheSize": 2
+    "channelCacheSize": 50
   },
   "amqp": {
     "host": "127.0.0.1",

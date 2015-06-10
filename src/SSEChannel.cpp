@@ -73,19 +73,27 @@ string SSEChannel::GetId() {
   Clients is distributed evenly across the client handler threads.
   @param client SSEClient pointer.
 */
-void SSEChannel::AddClient(SSEClient* client) {
+void SSEChannel::AddClient(SSEClient* client, const string& lastEventId) {
   DLOG(INFO) << "Adding client to channel " << GetId();
 
   // Send initial response headers, etc.
   client->Send("HTTP/1.1 200 OK\r\n");
   client->Send(header_data);
-  client->Send("\r\n\r\n");
+  client->Send("\r\n");
   client->Send(":ok\n\n");
+
+  if (!lastEventId.empty()) {
+    SendEventsSince(client, lastEventId);
+  }
 
   (*curthread)->AddClient(client); 
 
   *curthread++;
   if (curthread == clientpool.end()) curthread = clientpool.begin();
+}
+
+void SSEChannel::AddClient(SSEClient* client) {
+  AddClient(client, "");
 }
 
 /**
@@ -105,14 +113,14 @@ void SSEChannel::Broadcast(const string& data) {
   @param event Event to broadcast.
 */
 void SSEChannel::BroadcastEvent(SSEEvent* event) {
+  Broadcast(event->get());
+
   // Add event to cache if it contains a id field.
   if (!event->getid().empty()) {
     CacheEvent(event);
-  }
-
-  Broadcast(event->get());
-
-  delete(event);
+  } else {
+    delete(event);
+  } 
 }
 
 /**
@@ -120,18 +128,49 @@ void SSEChannel::BroadcastEvent(SSEEvent* event) {
   @param event Event to cache.
 */
 void SSEChannel::CacheEvent(SSEEvent* event) {
-  if ((int)cache_keys.size() == config->GetValueInt("server.channelCacheSize")) {
-    cache_data.erase(*(cache_keys.begin()));
-    cache_keys.erase(cache_keys.begin());
-  }
-
   // If we have the event id in our vector already don't remove it.
   // We want to keep the order even if we get an update on the event.
   if (std::find(cache_keys.begin(), cache_keys.end(), event->getid()) == cache_keys.end()) {
     cache_keys.push_back(event->getid());
   }
 
-  cache_data[event->getid()] = event->get();
+  cache_data[event->getid()] = event;
+
+  // Delete the oldest cache object if we hit the channelCacheSize limit.
+  if ((int)cache_keys.size() > config->GetValueInt("server.channelCacheSize")) {
+    string& firstElementId = *(cache_keys.begin());
+    delete(cache_data[firstElementId]);
+    cache_data.erase(firstElementId);
+    cache_keys.erase(cache_keys.begin());
+  }
+}
+
+/**
+  Get event from cache.
+  @param id ID of the event to fetch.
+*/
+SSEEvent* SSEChannel::GetEvent(const string& id) {
+  if (cache_data.find(id) == cache_data.end()) {
+    return NULL;   
+  }
+
+  return cache_data[id];
+}
+
+/**
+  Send all events since a given event id to client.
+  @param lastId Send all events since this id.
+*/
+void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
+  deque<string>::const_iterator it;
+
+  it = std::find(cache_keys.begin(), cache_keys.end(), lastId);
+  if (it == cache_keys.end()) return;
+
+  while (it != cache_keys.end()) {
+    client->Send(cache_data[*(it)]->get());
+    it++;
+  }
 }
 
 /**
