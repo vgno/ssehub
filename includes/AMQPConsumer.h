@@ -17,6 +17,8 @@ class AMQPConsumer {
 
     void Start(string host, int port, string user, string password, string exchange, string routingkey, void(*callback)(void*, string, string), void* callbackArg);
     bool Connect();
+    void Disconnect();
+    void Reconnect(int delay);
     void Consume();
     static void *ThreadMain(void*);
 

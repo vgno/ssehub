@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "AMQPConsumer.h"
 
 using namespace std;
@@ -10,10 +11,7 @@ void *AMQPConsumer::ThreadMain(void *pThis) {
   AMQPConsumer *pt = static_cast<AMQPConsumer*>(pThis);
   
   pt->Connect();
- 
-  while(1) {
-    pt->Consume(); 
-  }
+  pt->Consume();
 
   return NULL;
 }
@@ -31,6 +29,7 @@ AMQPConsumer::AMQPConsumer() {
 AMQPConsumer::~AMQPConsumer() {
   DLOG(INFO) << "AMQPConsumer destructor called.";
   pthread_cancel(_thread);
+  Disconnect();
 }
 
 /**
@@ -68,41 +67,88 @@ void AMQPConsumer::Start(string host, int port, string user, string password, st
 }
 
 /**
+ Disconnect from AMQP server.
+*/
+void AMQPConsumer::Disconnect() {
+  amqp_destroy_connection(amqpConn);
+}
+
+/**
+ Reconnect AMQP server.
+ @param delay Time to wait between disconnect and connect.
+*/
+void AMQPConsumer::Reconnect(int delay) {
+   Disconnect();
+   sleep(delay);
+   Connect();
+}
+
+/**
   Connect to AMQP server.
 */
 bool AMQPConsumer::Connect() {
+  amqp_rpc_reply_t rpc_ret;
   int ret;
 
   // Initialize connection.
   amqpConn = amqp_new_connection();
-
   amqpSocket = amqp_tcp_socket_new(amqpConn);
   LOG_IF(FATAL, !amqpSocket) << "Error creating amqp socket.";
 
-  ret = amqp_socket_open(amqpSocket, host.c_str(), port);
-  LOG_IF(FATAL, ret) << "Error creating amqp tcp socket.";
+  // Open connection.
+  do {
+    ret = amqp_socket_open(amqpSocket, host.c_str(), port);
 
-  amqp_rpc_reply_t login = amqp_login(amqpConn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, 
+    if (ret != AMQP_STATUS_OK) {
+      LOG(ERROR) << "Failed to connect to amqp server, retrying in 5 seconds.";
+      sleep(5);
+    }
+  } while(ret != AMQP_STATUS_OK);
+
+
+  // Try to log in.
+  do {
+   rpc_ret = amqp_login(amqpConn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN,
     user.c_str(), password.c_str());
 
-  LOG_IF(FATAL, AMQP_RESPONSE_NORMAL != login.reply_type) << "Failed to log into AMQP.";
+    if (rpc_ret.reply_type != AMQP_RESPONSE_NORMAL) {
+      LOG(ERROR) << "Failed to log into AMQP, retrying in 5 seconds.";
+      sleep(5);
+    }
+  } while(rpc_ret.reply_type != AMQP_RESPONSE_NORMAL);
 
+  // Connect to channel.
   amqp_channel_open(amqpConn, 1);
-  LOG_IF(FATAL, amqp_get_rpc_reply(amqpConn).reply_type != AMQP_RESPONSE_NORMAL) << "Failed to open channel.";
+  rpc_ret = amqp_get_rpc_reply(amqpConn);
+
+  if (rpc_ret.reply_type != AMQP_RESPONSE_NORMAL) {
+    LOG(ERROR) << "Failed to open AMQP channel, trying to reconnect in 5 seconds.";
+    Reconnect(5);
+  }
 
   // Declare queue.
   amqp_queue_declare_ok_t *r = amqp_queue_declare(amqpConn, 1, amqp_empty_bytes, 0, 0, 0, 1,
                                  amqp_empty_table);
-  LOG_IF(FATAL, amqp_get_rpc_reply(amqpConn).reply_type != AMQP_RESPONSE_NORMAL) << "Failed to declare queue.";
+
+  if (amqp_get_rpc_reply(amqpConn).reply_type != AMQP_RESPONSE_NORMAL) {
+    LOG(ERROR) << "Failed to declare queue, trying to reconnect in 5 seconds.";
+    Reconnect(5);
+  }
 
   amqpQueueName = amqp_bytes_malloc_dup(r->queue);
   LOG_IF(FATAL, amqpQueueName.bytes == NULL) << "Out memory while copying queue name";
 
   // Bind queue.
   amqp_queue_bind(amqpConn, 1, amqpQueueName, amqp_cstring_bytes(exchange.c_str()), 
-    amqp_cstring_bytes(routingkey.c_str()), amqp_empty_table);
+  amqp_cstring_bytes(routingkey.c_str()), amqp_empty_table);
 
-  LOG_IF(FATAL, amqp_get_rpc_reply(amqpConn).reply_type != AMQP_RESPONSE_NORMAL) << "Failed to bind to queue.";
+  rpc_ret = amqp_get_rpc_reply(amqpConn);
+
+  if (rpc_ret.reply_type != AMQP_RESPONSE_NORMAL) {
+    LOG(ERROR) << "Failed to bind to AMQP queue, trying to reconnect in 5 seconds.";
+    Reconnect(5);
+  }
+
   DLOG(INFO) << "Bound to queue " << (char*)amqpQueueName.bytes;
 
   return true;
@@ -112,26 +158,34 @@ bool AMQPConsumer::Connect() {
   Start consumption from AMQP server.
 */
 void AMQPConsumer::Consume() {
-  amqp_envelope_t envelope;
-  amqp_rpc_reply_t ret;
+  while(1) {
+    amqp_envelope_t envelope;
+    amqp_rpc_reply_t ret;
 
-  amqp_basic_consume(amqpConn, 1, amqpQueueName, amqp_empty_bytes, 0, 1, 0, amqp_empty_table);
-  LOG_IF(FATAL, amqp_get_rpc_reply(amqpConn).reply_type != AMQP_RESPONSE_NORMAL) << "Failed to consume.";
+    amqp_basic_consume(amqpConn, 1, amqpQueueName, amqp_empty_bytes, 0, 1, 0, amqp_empty_table);
+    ret = amqp_get_rpc_reply(amqpConn);
 
-  // Free up memory pool.
-  amqp_maybe_release_buffers(amqpConn);
-  
-  ret = amqp_consume_message(amqpConn, &envelope, NULL, 0);
+    // Free up memory pool.
+    amqp_maybe_release_buffers(amqpConn);
 
-  if (ret.reply_type != AMQP_RESPONSE_NORMAL) {
-    LOG(ERROR) << "Error consuming message.";
-  } else {
-   string msg;
-   string key;
-   msg.insert(0, (const char*)envelope.message.body.bytes, envelope.message.body.len);
-   key.insert(0, (const char*)envelope.routing_key.bytes, envelope.routing_key.len);
-   callback(callbackArg, key, msg);
+    if (ret.reply_type != AMQP_RESPONSE_NORMAL) {
+      LOG(ERROR) << "Failed to consume AMQP queue, trying to reconnect in 5 seconds.";
+      Reconnect(5);
+      continue;
+    }
+
+    ret = amqp_consume_message(amqpConn, &envelope, NULL, 0);
+
+    if (ret.reply_type != AMQP_RESPONSE_NORMAL) {
+      LOG(ERROR) << "Error consuming message.";
+    } else {
+     string msg;
+     string key;
+     msg.insert(0, (const char*)envelope.message.body.bytes, envelope.message.body.len);
+     key.insert(0, (const char*)envelope.routing_key.bytes, envelope.routing_key.len);
+     callback(callbackArg, key, msg);
+    }
+
+    amqp_destroy_envelope(&envelope);
   }
-
-  amqp_destroy_envelope(&envelope);
 }
