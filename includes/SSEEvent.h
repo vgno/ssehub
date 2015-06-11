@@ -13,7 +13,6 @@ using namespace std;
 class SSEEvent {
   public:
     SSEEvent(const string& jsonData);
-    ~SSEEvent();
     bool  compile();
     const string get();
     const string getpath();

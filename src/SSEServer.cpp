@@ -119,7 +119,7 @@ void SSEServer::InitSocket() {
   efd = epoll_create1(0);
   LOG_IF(FATAL, efd == -1) << "epoll_create1 failed.";
 
-  eventList = (struct epoll_event *)calloc(MAXEVENTS, sizeof(struct epoll_event));
+  eventList = static_cast<struct epoll_event *>(calloc(MAXEVENTS, sizeof(struct epoll_event)));
   LOG_IF(FATAL, eventList == NULL) << "Could not allocate memory for epoll eventlist.";
 }
 
@@ -131,8 +131,9 @@ SSEChannel* SSEServer::GetChannel(const string id) {
   SSEChannelList::iterator it;
 
   for (it = channels.begin(); it != channels.end(); it++) {
-    if (((SSEChannel*)*it)->GetId().compare(id) == 0) {
-      return (SSEChannel*)*it;
+    SSEChannel* chan = static_cast<SSEChannel*>(*it);
+    if (chan->GetId().compare(id) == 0) {
+      return chan;
     }
   }
 
@@ -174,20 +175,15 @@ void SSEServer::AcceptLoop() {
 
     // Add it to our epoll eventlist.
     struct epoll_event event;
-    event.data.fd = tmpfd;
     event.events = EPOLLIN | EPOLLET;
-    int ret = epoll_ctl(efd, EPOLL_CTL_ADD, tmpfd, &event);
+    event.data.ptr = new SSEClient(tmpfd, &csin);
 
+    int ret = epoll_ctl(efd, EPOLL_CTL_ADD, tmpfd, &event);
     if (ret == -1) {
       LOG(ERROR) << "Could not add client to epoll eventlist: " << strerror(errno);
-      close(tmpfd);
+      static_cast<SSEClient*>(event.data.ptr)->Destroy();
       continue;
     }
-
-    // Log client ip.
-    char ip[32];
-    inet_ntop(AF_INET, &csin.sin_addr, (char*)&ip, 32);
-    LOG(INFO) << "Accepted new connection from " << ip;
   }
 }
 
@@ -214,15 +210,18 @@ void SSEServer::ClientRouterLoop() {
     n = epoll_wait(efd, eventList, MAXEVENTS, -1);
 
     for (i = 0; i < n; i++) {
+      SSEClient* client;
+      client = static_cast<SSEClient*>(eventList[i].data.ptr);
+
       // Close socket if an error occurs.
       if ((eventList[i].events & EPOLLERR) || (eventList[i].events & EPOLLHUP) || (!(eventList[i].events & EPOLLIN))) {
         DLOG(ERROR) << "Error occoured while reading data from socket.";
-        close(eventList[i].data.fd);
+        client->Destroy();
         continue;
       }
 
-       // Read from client.
-      int len = read(eventList[i].data.fd, &buf, 512);
+      // Read from client.
+      size_t len = client->Read(&buf, 512);
       buf[len] = '\0';
 
       // Parse the request.
@@ -232,7 +231,8 @@ void SSEServer::ClientRouterLoop() {
 
       if (!req.Success()) {
         LOG(INFO) << "Invalid HTTP request receieved, shutting down connection.";
-        close(eventList[i].data.fd);
+        client->Send("Invalid HTTP request receieved, shutting down connection.\r\n");
+        client->Destroy();
         continue;
       }
 
@@ -243,11 +243,11 @@ void SSEServer::ClientRouterLoop() {
         // substr(1) to remove the /.
         SSEChannel *ch = GetChannel(chName);
         if (ch != NULL) {
-          ch->AddClient(new SSEClient(eventList[i].data.fd), &req);
-          epoll_ctl(efd, EPOLL_CTL_DEL, eventList[i].data.fd, NULL);
+          ch->AddClient(client, &req);
+          epoll_ctl(efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
         } else {
-          write(eventList[i].data.fd, "Channel does not exist.\r\n", 25);
-          close(eventList[i].data.fd);
+          client->Send("Channel does not exist.\r\n");
+          client->Destroy();
         }
       }
     }

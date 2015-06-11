@@ -48,19 +48,22 @@ void SSEClientHandler::ThreadMainFunc() {
   int n, i;
   struct epoll_event *t_events, t_event;
 
-  t_events = (epoll_event*)calloc(1024, sizeof(t_event));
+  t_events = static_cast<epoll_event*>(calloc(1024, sizeof(t_event)));
 
   while(1) {
     n = epoll_wait(epoll_fd, t_events, 1024, -1);
 
     for (i = 0; i < n; i++) {
+      SSEClient* client;
+      client = static_cast<SSEClient*>(t_events[i].data.ptr);
+
       if ((t_events[i].events & EPOLLHUP) || (t_events[i].events & EPOLLRDHUP)) {
         DLOG(INFO) << "Thread " << id << ": Client disconnected.";
-        RemoveClient((SSEClient*)t_events[i].data.ptr);
+        RemoveClient(client);
       } else if (t_events[i].events & EPOLLERR) {
         // If an error occours on a client socket, just drop the connection.
         DLOG(INFO) << "Thread " << id << ": Error on client socket: " << strerror(errno);
-        RemoveClient((SSEClient*)t_events[i].data.ptr);
+        RemoveClient(client);
       }
     }
   }
@@ -74,15 +77,17 @@ void SSEClientHandler::AddClient(SSEClient* client) {
   int ret;
   struct epoll_event ev;
 
-  client_list.push_back(client);
-
-  ev.data.fd  = client->Getfd();
   ev.events   = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLET;
   ev.data.ptr = client;
-
   ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client->Getfd(), &ev);
-  DLOG_IF(ERROR, ret == -1) << "Failed to add client to epoll event list.";
- 
+
+  if (ret == -1) {
+    DLOG(ERROR) << "Failed to add client " << client->GetIP() << " to epoll event list.";
+    client->Destroy();
+    return;
+  }
+
+  client_list.push_back(client);
   num_clients++;
 
   DLOG(INFO) << "Client added to thread id: " << id << " Numclients: " << num_clients;
@@ -100,7 +105,7 @@ bool SSEClientHandler::RemoveClient(SSEClient* client) {
   if (it == client_list.end()) return false;
 
   client_list.erase(it);
-  delete(client);
+  client->Destroy();
   num_clients--;
 
   return true;

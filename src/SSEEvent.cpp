@@ -9,10 +9,6 @@ SSEEvent::SSEEvent(const string& jsondata) {
   retry = 0;
 }
 
-SSEEvent::~SSEEvent() {
-  LOG(INFO) << "Deleting SSEEvent with id " << id;
-}
-
 bool SSEEvent::compile() {
   boost::property_tree::ptree pt;
   string indata;
