@@ -1,6 +1,6 @@
-#include "SSEClient.h"
 #include <glog/logging.h>
 #include <sys/socket.h>
+#include "SSEClient.h"
 
 SSEClient::SSEClient(int fd) {
   uuid = boost::uuids::random_generator()();

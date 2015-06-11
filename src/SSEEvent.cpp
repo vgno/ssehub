@@ -1,6 +1,6 @@
-#include "SSEEvent.h"
 #include <exception>
 #include <boost/algorithm/string.hpp>
+#include "SSEEvent.h"
 
 using namespace std;
 
@@ -33,8 +33,7 @@ bool SSEEvent::compile() {
     // Items not required, so don't fail.
   }
 
-
- boost::split(data, indata, boost::is_any_of("\n"));
+  boost::split(data, indata, boost::is_any_of("\n"));
 
  return true;
 }
@@ -44,7 +43,6 @@ const string SSEEvent::get() {
 
   if (data.empty() || path.empty()) return "";
 
- 
   if (!id.empty()) ss << "id: " << id << endl;   
   if (!event.empty()) ss << "event: " << event << endl;   
   if (retry > 0) ss << "retry: " << retry << endl;

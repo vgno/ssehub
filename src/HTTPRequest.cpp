@@ -1,6 +1,6 @@
-#include "string.h"
-#include "HTTPRequest.h"
 #include <glog/logging.h>
+#include <string.h>
+#include "HTTPRequest.h"
 
 /**
   Constructor.

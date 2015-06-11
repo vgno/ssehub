@@ -1,4 +1,3 @@
-#include <iostream>
 #include "AMQPConsumer.h"
 
 using namespace std;

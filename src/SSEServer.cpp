@@ -1,9 +1,8 @@
+#include <stdlib.h>
 #include "SSEServer.h"
 #include "SSEClient.h"
 #include "HTTPRequest.h"
 #include "SSEEvent.h"
-#include <iostream>
-#include <stdlib.h>
 
 using namespace std;
 
@@ -24,7 +23,6 @@ SSEServer::~SSEServer() {
   DLOG(INFO) << "SSEServer destructor called.";
 
   pthread_cancel(routerThread);
- 
   close(serverSocket);
   close(efd);
   free(eventList);
@@ -58,18 +56,18 @@ void SSEServer::AmqpCallback(string key, string msg) {
     return;
   }
 
-  string chname;
+  string chName;
   // If path is set in the JSON event data use that as target channel name.
-  if (!event->getpath().empty()) { chname = event->getpath(); } 
+  if (!event->getpath().empty()) { chName = event->getpath(); }
   // Otherwise use the routingkey.
-  else if (!key.empty())         { chname = key; } 
+  else if (!key.empty())         { chName = key; }
   // If none of the is present just return and ignore the message.
   else                           { return; }
 
-  SSEChannel *ch = GetChannel(chname);
+  SSEChannel *ch = GetChannel(chName);
   
   if (ch == NULL) {
-    ch = new SSEChannel(config, chname);
+    ch = new SSEChannel(config, chName);
     channels.push_back(ch);
   }
 
@@ -216,20 +214,22 @@ void SSEServer::ClientRouterLoop() {
     n = epoll_wait(efd, eventList, MAXEVENTS, -1);
 
     for (i = 0; i < n; i++) {
-      /* Close socket if an error occurs. */
+      // Close socket if an error occurs.
       if ((eventList[i].events & EPOLLERR) || (eventList[i].events & EPOLLHUP) || (!(eventList[i].events & EPOLLIN))) {
         DLOG(ERROR) << "Error occoured while reading data from socket.";
         close(eventList[i].data.fd);
         continue;
       }
 
-       /* Read from client. */
+       // Read from client.
       int len = read(eventList[i].data.fd, &buf, 512);
       buf[len] = '\0';
 
+      // Parse the request.
+      HTTPRequest req(buf, len);
+
       DLOG(INFO) << "Read " << len << " bytes from client: " << buf;
 
-      HTTPRequest req(buf, len);
       if (!req.Success()) {
         LOG(INFO) << "Invalid HTTP request receieved, shutting down connection.";
         close(eventList[i].data.fd);
@@ -237,10 +237,11 @@ void SSEServer::ClientRouterLoop() {
       }
 
       if (!req.GetPath().empty()) {
-        DLOG(INFO) << "CHANNEL:" << req.GetPath().substr(1) << ".";
+        string chName = req.GetPath().substr(1);
+        DLOG(INFO) << "CHANNEL:" << chName << ".";
         
         // substr(1) to remove the /.
-        SSEChannel *ch = GetChannel(req.GetPath().substr(1));
+        SSEChannel *ch = GetChannel(chName);
         if (ch != NULL) {
           ch->AddClient(new SSEClient(eventList[i].data.fd), &req);
           epoll_ctl(efd, EPOLL_CTL_DEL, eventList[i].data.fd, NULL);

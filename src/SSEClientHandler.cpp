@@ -28,14 +28,8 @@ SSEClientHandler::SSEClientHandler(int tid) {
 */
 SSEClientHandler::~SSEClientHandler() {
   DLOG(INFO) << "SSEClientHandler destructor called for " << "id: " << id;
-  StopThread();
-}
-
-/**
-  Stop the thread listening for client disconnectds.
-*/
-void SSEClientHandler::StopThread() {
   pthread_cancel(_thread);
+  close(epoll_fd);
 }
 
 /**

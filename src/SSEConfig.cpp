@@ -1,13 +1,11 @@
-#include "SSEConfig.h" 
 #include <glog/logging.h>
-#include <iostream>
 #include <sstream>
-#include <fstream>
 #include <stdlib.h>
 #include <exception>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include "SSEConfig.h"
 
 using namespace std;
 
@@ -30,7 +28,6 @@ void SSEConfig::InitDefaults() {
  ConfigKeys["server.pingInterval"]       = "5";
  ConfigKeys["server.threadsPerChannel"]  = "5";
  ConfigKeys["server.channelCacheSize"]   = "500";
-
 
  ConfigKeys["amqp.host"]                 = "127.0.0.1";
  ConfigKeys["amqp.port"]                 = "5672";

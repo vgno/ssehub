@@ -1,5 +1,4 @@
 #include "SSEChannel.h"
-#include <iostream>
 
 using namespace std;
 
@@ -51,7 +50,6 @@ void SSEChannel::InitializeThreads() {
   }
 
   curthread = clientpool.begin();
-
   pthread_create(&_pingthread, NULL, &SSEChannel::PingThread, this); 
 }
 
@@ -87,7 +85,6 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   string lastEventId = req->GetHeader("Last-Event-ID");
   if (lastEventId.empty()) lastEventId = req->GetQueryString("evs_last_event_id");
   if (lastEventId.empty()) lastEventId = req->GetQueryString("lastEventId");
-
 
   // Send initial response headers, etc.
   client->Send("HTTP/1.1 200 OK\r\n");
