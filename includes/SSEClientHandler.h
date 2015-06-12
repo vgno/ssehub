@@ -3,18 +3,23 @@
 
 #include <string>
 #include <pthread.h>
-#include "SSEClient.h"
 
 using namespace std;
+
+// Forward declarations.
+class SSEClient;
+
+typedef vector<SSEClient*> SSEClientPtrList;
 
 class SSEClientHandler {
   public:
     SSEClientHandler(int);
     ~SSEClientHandler();
 
-    void AddClient(SSEClient* client);
+    bool AddClient(class SSEClient* client);
     bool RemoveClient(SSEClient* client);
     void Broadcast(const string& msg);
+    long GetNumClients();
 
   private:
     int id;

@@ -45,15 +45,14 @@ void *SSEClientHandler::ThreadMain(void *pThis) {
   Listen for disconnect events and destroy client object for every client disconnect.
 */
 void SSEClientHandler::ThreadMainFunc() {
-  int n, i;
   struct epoll_event *t_events, t_event;
 
   t_events = static_cast<epoll_event*>(calloc(1024, sizeof(t_event)));
 
   while(1) {
-    n = epoll_wait(epoll_fd, t_events, 1024, -1);
+    int n = epoll_wait(epoll_fd, t_events, 1024, -1);
 
-    for (i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
       SSEClient* client;
       client = static_cast<SSEClient*>(t_events[i].data.ptr);
 
@@ -73,7 +72,7 @@ void SSEClientHandler::ThreadMainFunc() {
   Add client to pool.
   @param client SSEClient pointer.
 */
-void SSEClientHandler::AddClient(SSEClient* client) {
+bool SSEClientHandler::AddClient(SSEClient* client) {
   int ret;
   struct epoll_event ev;
 
@@ -84,13 +83,15 @@ void SSEClientHandler::AddClient(SSEClient* client) {
   if (ret == -1) {
     DLOG(ERROR) << "Failed to add client " << client->GetIP() << " to epoll event list.";
     client->Destroy();
-    return;
+    return false;
   }
 
   client_list.push_back(client);
   num_clients++;
 
   DLOG(INFO) << "Client added to thread id: " << id << " Numclients: " << num_clients;
+
+  return true;
 }
 
 /**
@@ -121,4 +122,8 @@ void SSEClientHandler::Broadcast(const string& msg) {
   for (it = client_list.begin(); it != client_list.end(); it++) {
     (*it)->Send(msg);
   }
+}
+
+long SSEClientHandler::GetNumClients() {
+  return num_clients;
 }

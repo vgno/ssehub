@@ -1,8 +1,6 @@
 #ifndef SERVER_H
 #define SERVER_H
-#include "SSEConfig.h"
-#include "SSEChannel.h"
-#include "AMQPConsumer.h"
+
 #include <glog/logging.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -12,25 +10,34 @@
 #include <sys/epoll.h>
 #include <signal.h>
 #include <errno.h>
+#include "SSEStatsHandler.h"
+#include "AMQPConsumer.h"
 
 #define MAXEVENTS 1024
 
 extern int stop;
 
+// Forward declarations.
+class SSEConfig;
+class SSEChannel;
+
 typedef vector<SSEChannel*> SSEChannelList;
 
 class SSEServer {
   public:
-    SSEServer(SSEConfig*);
+    SSEServer(SSEConfig* config);
     ~SSEServer();
     
     void Run();
     static void *RouterThreadMain(void *);
+    SSEChannelList::const_iterator ChannelsBegin();
+    SSEChannelList::const_iterator ChannelsEnd();
 
   private:
     SSEConfig *config;
     SSEChannelList channels;
     AMQPConsumer amqp;
+    SSEStatsHandler stats;
     int serverSocket;
     int efd;
     struct epoll_event *eventList;

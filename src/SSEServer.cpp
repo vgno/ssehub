@@ -3,6 +3,8 @@
 #include "SSEClient.h"
 #include "HTTPRequest.h"
 #include "SSEEvent.h"
+#include "SSEConfig.h"
+#include "SSEChannel.h"
 
 using namespace std;
 
@@ -12,6 +14,7 @@ using namespace std;
 */
 SSEServer::SSEServer(SSEConfig *config) {
   this->config = config;
+  stats.Init(config, this);
 }
 
 /**
@@ -51,7 +54,7 @@ void SSEServer::AmqpCallbackWrapper(void* pThis, const string key, const string 
 void SSEServer::AmqpCallback(string key, string msg) {
   SSEEvent* event = new SSEEvent(msg);
   if (!event->compile()) {
-    free(event);
+    delete(event);
     DLOG(ERROR) << "Discarding event with invalid format recieved on " << key;
     return;
   }
@@ -141,6 +144,20 @@ SSEChannel* SSEServer::GetChannel(const string id) {
 }
 
 /**
+  Returns an iterator object pointing to the first element in the channels list.
+*/
+SSEChannelList::const_iterator SSEServer::ChannelsBegin() {
+  return channels.begin();
+}
+
+/**
+  Returns an iterator object pointing to the last element in the channels list.
+*/
+SSEChannelList::const_iterator SSEServer::ChannelsEnd() {
+  return channels.end();
+}
+
+/**
   Accept new client connections.
 */
 void SSEServer::AcceptLoop() {
@@ -201,15 +218,14 @@ void *SSEServer::RouterThreadMain(void *pThis) {
   Read request and route client to the requested channel.
 */
 void SSEServer::ClientRouterLoop() {
-  int i, n;
   char buf[512];
 
   DLOG(INFO) << "Started client router thread.";
 
   while(1) {
-    n = epoll_wait(efd, eventList, MAXEVENTS, -1);
+    int n = epoll_wait(efd, eventList, MAXEVENTS, -1);
 
-    for (i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
       SSEClient* client;
       client = static_cast<SSEClient*>(eventList[i].data.ptr);
 
@@ -237,6 +253,13 @@ void SSEServer::ClientRouterLoop() {
       }
 
       if (!req.GetPath().empty()) {
+        // Handle /stats endpoint.
+        if (req.GetPath().compare("/stats") == 0) {
+          stats.SendToClient(client);
+          client->Destroy();
+          continue;
+        }
+
         string chName = req.GetPath().substr(1);
         DLOG(INFO) << "CHANNEL:" << chName << ".";
         

@@ -28,6 +28,4 @@ class SSEClient {
     struct sockaddr_in _csin;
 };
 
-typedef vector<SSEClient*> SSEClientPtrList;
-
 #endif

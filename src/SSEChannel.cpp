@@ -1,4 +1,9 @@
 #include "SSEChannel.h"
+#include "SSEClient.h"
+#include "SSEClientHandler.h"
+#include "SSEEvent.h"
+#include "SSEConfig.h"
+#include "HTTPRequest.h"
 
 using namespace std;
 
@@ -10,6 +15,7 @@ using namespace std;
 SSEChannel::SSEChannel(SSEConfig* conf, string id) {
   this->id = id;
   this->config = conf;
+  num_broadcasted_events = 0;
   DLOG(INFO) << "Initializing channel " << id;
   DLOG(INFO) << "Threads per channel: " << config->GetValue("server.threadsPerChannel");
 
@@ -103,7 +109,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
 
   (*curthread)->AddClient(client); 
 
-  *curthread++;
+  curthread++;
   if (curthread == clientpool.end()) curthread = clientpool.begin();
 }
 
@@ -116,7 +122,7 @@ void SSEChannel::Broadcast(const string& data) {
 
   for (it = clientpool.begin(); it != clientpool.end(); it++) {
     (*it)->Broadcast(data);
-  }  
+  }
 }
 
 /**
@@ -125,6 +131,7 @@ void SSEChannel::Broadcast(const string& data) {
 */
 void SSEChannel::BroadcastEvent(SSEEvent* event) {
   Broadcast(event->get());
+  num_broadcasted_events++;
 
   // Add event to cache if it contains a id field.
   if (!event->getid().empty()) {
@@ -225,4 +232,22 @@ void SSEChannel::CommitHeaderData() {
   }
 
   header_data = header_data_ss.str();
+}
+
+/**
+ Fetch various statistics for the channel.
+ @param stats Pointer to SSEChannelStats struct which is to be filled with the statistics.
+**/
+void SSEChannel::GetStats(SSEChannelStats* stats) {
+  ClientHandlerList::iterator it;
+  long num_clients = 0;
+
+  for (it = clientpool.begin(); it != clientpool.end(); it++) {
+    num_clients += (*it)->GetNumClients();
+  }
+
+  stats->num_clients            = num_clients;
+  stats->num_broadcasted_events = num_broadcasted_events;
+  stats->num_cached_events      = cache_keys.size();
+  stats->cache_size             = config->GetValueInt("server.channelCacheSize");
 }

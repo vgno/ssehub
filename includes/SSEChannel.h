@@ -10,16 +10,24 @@
 #include <amqp.h>
 #include <amqp_framing.h>
 #include <pthread.h>
-#include "SSEConfig.h"
-#include "AMQPConsumer.h"
-#include "SSEClientHandler.h"
-#include "SSEClient.h"
-#include "SSEEvent.h"
-#include "HTTPRequest.h"
 
 using namespace std;
 
+// Forward declarations.
+class SSEEvent;
+class SSEClient;
+class SSEConfig;
+class SSEClientHandler;
+class HTTPRequest;
+
 typedef vector<SSEClientHandler*> ClientHandlerList;
+
+struct SSEChannelStats {
+  long num_clients;
+  int  num_cached_events;
+  long num_broadcasted_events;
+  int  cache_size;
+};
 
 class SSEChannel {
   public:
@@ -32,10 +40,12 @@ class SSEChannel {
     void CacheEvent(SSEEvent* event);
     SSEEvent* GetEvent(const string& id);
     void SendEventsSince(SSEClient* client, string lastId);
+    void GetStats(SSEChannelStats* stats);
 
   private:
     string id;
     string header_data;
+    long num_broadcasted_events;
     map<string, string> request_headers;
     ClientHandlerList::iterator curthread;
     SSEConfig *config;
