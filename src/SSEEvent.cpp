@@ -9,6 +9,10 @@ SSEEvent::SSEEvent(const string& jsondata) {
   retry = 0;
 }
 
+SSEEvent::~SSEEvent() {
+
+}
+
 bool SSEEvent::compile() {
   boost::property_tree::ptree pt;
   string indata;
@@ -60,4 +64,3 @@ const string SSEEvent::getpath() {
 const string SSEEvent::getid() {
   return id;
 }
-

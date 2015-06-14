@@ -1,4 +1,5 @@
 #ifndef SERVER_H
+
 #define SERVER_H
 
 #include <glog/logging.h>
@@ -10,6 +11,7 @@
 #include <sys/epoll.h>
 #include <signal.h>
 #include <errno.h>
+#include <boost/shared_ptr.hpp>
 #include "SSEStatsHandler.h"
 #include "AMQPConsumer.h"
 
@@ -21,7 +23,7 @@ extern int stop;
 class SSEConfig;
 class SSEChannel;
 
-typedef vector<SSEChannel*> SSEChannelList;
+typedef vector<boost::shared_ptr<SSEChannel> > SSEChannelList;
 
 class SSEServer {
   public:
@@ -40,7 +42,6 @@ class SSEServer {
     SSEStatsHandler stats;
     int serverSocket;
     int efd;
-    struct epoll_event *eventList;
     struct sockaddr_in sin;
     pthread_t routerThread;
     

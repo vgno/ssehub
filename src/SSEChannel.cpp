@@ -52,7 +52,7 @@ void SSEChannel::InitializeThreads() {
   int i;
 
   for (i = 0; i < config->GetValueInt("server.threadsPerChannel"); i++) {
-    clientpool.push_back(new SSEClientHandler(i));
+    clientpool.push_back(ClientHandlerPtr(new SSEClientHandler(i)));
   }
 
   curthread = clientpool.begin();
@@ -64,13 +64,7 @@ void SSEChannel::InitializeThreads() {
   Called by destructor.
 */
 void SSEChannel::CleanupThreads() {
-  ClientHandlerList::iterator it;
-
   pthread_cancel(_pingthread);
-
-  for (it = clientpool.begin(); it != clientpool.end(); it++) { 
-   delete(*it);
-  }
 }
 
 /**
@@ -133,7 +127,7 @@ void SSEChannel::BroadcastEvent(SSEEvent* event) {
   Broadcast(event->get());
   num_broadcasted_events++;
 
-  // Add event to cache if it contains a id field.
+  //Add event to cache if it contains a id field.
   if (!event->getid().empty()) {
     CacheEvent(event);
   } else {
@@ -152,27 +146,14 @@ void SSEChannel::CacheEvent(SSEEvent* event) {
     cache_keys.push_back(event->getid());
   }
 
-  cache_data[event->getid()] = event;
+  cache_data[event->getid()] = SSEEventPtr(event);
 
   // Delete the oldest cache object if we hit the channelCacheSize limit.
   if ((int)cache_keys.size() > config->GetValueInt("server.channelCacheSize")) {
     string& firstElementId = *(cache_keys.begin());
-    delete(cache_data[firstElementId]);
     cache_data.erase(firstElementId);
     cache_keys.erase(cache_keys.begin());
   }
-}
-
-/**
-  Get event from cache.
-  @param id ID of the event to fetch.
-*/
-SSEEvent* SSEChannel::GetEvent(const string& id) {
-  if (cache_data.find(id) == cache_data.end()) {
-    return NULL;   
-  }
-
-  return cache_data[id];
 }
 
 /**
@@ -224,7 +205,6 @@ void SSEChannel::AddResponseHeader(const string& header, const string& val) {
 */
 void SSEChannel::CommitHeaderData() {
   stringstream header_data_ss;
-
   map<string, string>::iterator it;
 
   for (it = request_headers.begin(); it != request_headers.end(); it++) {

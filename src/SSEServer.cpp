@@ -21,18 +21,11 @@ SSEServer::SSEServer(SSEConfig *config) {
   Destructor.
 */
 SSEServer::~SSEServer() {
-  vector<SSEChannel*>::iterator it;
-
   DLOG(INFO) << "SSEServer destructor called.";
 
   pthread_cancel(routerThread);
   close(serverSocket);
   close(efd);
-  free(eventList);
-
-  for (it = channels.begin(); it != channels.end(); it++) {
-    delete(*it);
-  }
 }
 
 /**
@@ -53,8 +46,8 @@ void SSEServer::AmqpCallbackWrapper(void* pThis, const string key, const string 
 */
 void SSEServer::AmqpCallback(string key, string msg) {
   SSEEvent* event = new SSEEvent(msg);
+
   if (!event->compile()) {
-    delete(event);
     DLOG(ERROR) << "Discarding event with invalid format recieved on " << key;
     return;
   }
@@ -71,7 +64,7 @@ void SSEServer::AmqpCallback(string key, string msg) {
   
   if (ch == NULL) {
     ch = new SSEChannel(config, chName);
-    channels.push_back(ch);
+    channels.push_back(SSEChannelPtr(ch));
   }
 
   ch->BroadcastEvent(event);
@@ -121,9 +114,6 @@ void SSEServer::InitSocket() {
 
   efd = epoll_create1(0);
   LOG_IF(FATAL, efd == -1) << "epoll_create1 failed.";
-
-  eventList = static_cast<struct epoll_event *>(calloc(MAXEVENTS, sizeof(struct epoll_event)));
-  LOG_IF(FATAL, eventList == NULL) << "Could not allocate memory for epoll eventlist.";
 }
 
 /**
@@ -134,7 +124,7 @@ SSEChannel* SSEServer::GetChannel(const string id) {
   SSEChannelList::iterator it;
 
   for (it = channels.begin(); it != channels.end(); it++) {
-    SSEChannel* chan = static_cast<SSEChannel*>(*it);
+    SSEChannel* chan = static_cast<SSEChannel*>((*it).get());
     if (chan->GetId().compare(id) == 0) {
       return chan;
     }
@@ -219,11 +209,12 @@ void *SSEServer::RouterThreadMain(void *pThis) {
 */
 void SSEServer::ClientRouterLoop() {
   char buf[512];
-
+  boost::shared_ptr<struct epoll_event[]> eventList(new struct epoll_event[MAXEVENTS]);
+  
   DLOG(INFO) << "Started client router thread.";
 
   while(1) {
-    int n = epoll_wait(efd, eventList, MAXEVENTS, -1);
+    int n = epoll_wait(efd, eventList.get(), MAXEVENTS, -1);
 
     for (int i = 0; i < n; i++) {
       SSEClient* client;

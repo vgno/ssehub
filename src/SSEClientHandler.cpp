@@ -3,10 +3,21 @@
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
 #include "SSEClientHandler.h"
 #include "SSEClient.h"
 
+extern int stop;
+
 using namespace std;
+
+class MsgPair {
+  public:
+    MsgPair(SSEClientHandler* handler, std::string msg) : handler(handler), msg(msg) {}
+    SSEClientHandler* handler;
+    std::string msg;
+};
 
 /**
   Constructor.
@@ -20,7 +31,7 @@ SSEClientHandler::SSEClientHandler(int tid) {
   epoll_fd = epoll_create1(0);
   LOG_IF(FATAL, epoll_fd == -1) << "epoll_create1 failed.";
 
-  pthread_create(&_thread, NULL, &SSEClientHandler::ThreadMain, this); 
+  pthread_create(&cleanup_thread, NULL, &SSEClientHandler::CleanupMain, this);
 }
 
 /**
@@ -28,29 +39,27 @@ SSEClientHandler::SSEClientHandler(int tid) {
 */
 SSEClientHandler::~SSEClientHandler() {
   DLOG(INFO) << "SSEClientHandler destructor called for " << "id: " << id;
-  pthread_cancel(_thread);
+  pthread_cancel(cleanup_thread);
   close(epoll_fd);
 }
 
 /**
-  Wrapper function for ThreadMainFunc to satisfy the function-type pthread expects.
+  Wrapper function for CleanupMainFunc to satisfy the function-type pthread expects.
 */
-void *SSEClientHandler::ThreadMain(void *pThis) {
+void *SSEClientHandler::CleanupMain(void *pThis) {
   SSEClientHandler *pt = static_cast<SSEClientHandler*>(pThis);
-  pt->ThreadMainFunc();
+  pt->CleanupMainFunc();
   return NULL;
 }
 
 /**
   Listen for disconnect events and destroy client object for every client disconnect.
 */
-void SSEClientHandler::ThreadMainFunc() {
-  struct epoll_event *t_events, t_event;
-
-  t_events = static_cast<epoll_event*>(calloc(1024, sizeof(t_event)));
-
-  while(1) {
-    int n = epoll_wait(epoll_fd, t_events, 1024, -1);
+void SSEClientHandler::CleanupMainFunc() {
+  boost::shared_ptr<struct epoll_event[]> t_events(new struct epoll_event[1024]);
+  
+  while(!stop) {
+    int n = epoll_wait(epoll_fd, t_events.get(), 1024, -1);
 
     for (int i = 0; i < n; i++) {
       SSEClient* client;
@@ -86,7 +95,7 @@ bool SSEClientHandler::AddClient(SSEClient* client) {
     return false;
   }
 
-  client_list.push_back(client);
+  client_list.push_back(SSEClientPtr(client));
   num_clients++;
 
   DLOG(INFO) << "Client added to thread id: " << id << " Numclients: " << num_clients;
@@ -101,27 +110,51 @@ bool SSEClientHandler::AddClient(SSEClient* client) {
 */
 bool SSEClientHandler::RemoveClient(SSEClient* client) {
   SSEClientPtrList::iterator it;
-  it = std::find(client_list.begin(), client_list.end(), client);
 
-  if (it == client_list.end()) return false;
+  for (it = client_list.begin(); it != client_list.end(); it++) {
+    if ((*it).get() == client) {
+      client_list.erase(it);
+      num_clients--;
+      return true;
+    }
+  }
 
-  client_list.erase(it);
-  client->Destroy();
-  num_clients--;
 
-  return true;
+  return false;
 }
 
 /**
   Broadcast message to all clients connected to this clienthandler.
   @param msg String to broadcast.
 */
-void SSEClientHandler::Broadcast(const string& msg) {
+void SSEClientHandler::Broadcast(const string msg) {
   SSEClientPtrList::iterator it;
 
   for (it = client_list.begin(); it != client_list.end(); it++) {
-    (*it)->Send(msg);
+    if (*it) {
+      (*it)->Send(msg);
+    }
   }
+}
+
+/**
+  Handler function for AsyncBroadcast.
+*/
+void* SSEClientHandler::AsyncBroadcastFunc(void *mp) {
+  MsgPair* p = static_cast<MsgPair*>(mp);
+  p->handler->Broadcast(p->msg);
+  delete(p);
+  return NULL;
+}
+
+/**
+  Broadcast message to all clients connected to this clienthandler in a own separate thread.
+  @param msg String to broadcast.
+*/
+void SSEClientHandler::AsyncBroadcast(const string msg) {
+  pthread_t _thread;
+  pthread_create(&_thread, NULL,
+      &SSEClientHandler::AsyncBroadcastFunc, new MsgPair(this, msg));
 }
 
 long SSEClientHandler::GetNumClients() {

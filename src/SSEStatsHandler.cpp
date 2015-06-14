@@ -48,7 +48,7 @@ const std::string SSEStatsHandler::GetJSON() {
 
   for (it = server->ChannelsBegin(); it != server->ChannelsEnd(); it++) {
     boost::property_tree::ptree pt_element; 
-    SSEChannel* chan = static_cast<SSEChannel*>(*it);
+    SSEChannel* chan = (*it).get();
     SSEChannelStats stat;
 
     chan->GetStats(&stat);

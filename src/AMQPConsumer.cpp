@@ -3,13 +3,14 @@
 
 using namespace std;
 
+extern int stop;
+
 /**
   Wrapper function used by ptrhead to run our Consume() function.
   @param pThis Pointer to AMQPConsumer instance object.
 */
 void *AMQPConsumer::ThreadMain(void *pThis) {
   AMQPConsumer *pt = static_cast<AMQPConsumer*>(pThis);
-  
   pt->Connect();
   pt->Consume();
 
@@ -28,6 +29,7 @@ AMQPConsumer::AMQPConsumer() {
 */
 AMQPConsumer::~AMQPConsumer() {
   DLOG(INFO) << "AMQPConsumer destructor called.";
+
   pthread_cancel(_thread);
   Disconnect();
 }
@@ -70,7 +72,9 @@ void AMQPConsumer::Start(string host, int port, string user, string password, st
  Disconnect from AMQP server.
 */
 void AMQPConsumer::Disconnect() {
+  amqp_connection_close(amqpConn, AMQP_REPLY_SUCCESS);
   amqp_destroy_connection(amqpConn);
+  amqp_bytes_free(amqpQueueName);
 }
 
 /**
@@ -89,7 +93,7 @@ void AMQPConsumer::Reconnect(int delay) {
 bool AMQPConsumer::Connect() {
   amqp_rpc_reply_t rpc_ret;
   int ret;
-
+  
   // Initialize connection.
   amqpConn = amqp_new_connection();
   amqpSocket = amqp_tcp_socket_new(amqpConn);
@@ -149,7 +153,7 @@ bool AMQPConsumer::Connect() {
     Reconnect(5);
   }
 
-  DLOG(INFO) << "Bound to queue " << (char*)amqpQueueName.bytes;
+ // DLOG(INFO) << "Bound to queue " << (char*)amqpQueueName.bytes;
 
   return true;
 }
@@ -158,7 +162,7 @@ bool AMQPConsumer::Connect() {
   Start consumption from AMQP server.
 */
 void AMQPConsumer::Consume() {
-  while(1) {
+  while(!stop) {
     amqp_envelope_t envelope;
     amqp_rpc_reply_t ret;
 

@@ -11,8 +11,8 @@
 SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   this->fd = fd;
   memcpy(&_csin, csin, sizeof(struct sockaddr_in));
-  uuid = boost::uuids::random_generator()();
-  DLOG(INFO) << "Initialized client id: " << uuid << " ip: " << GetIP();
+//  uuid = boost::uuids::random_generator()();
+  DLOG(INFO) << "Initialized client with IP: " << GetIP();
 }
 
 /**
@@ -43,7 +43,7 @@ size_t SSEClient::Read(void* buf, int len) {
   Destructor.
 */
 SSEClient::~SSEClient() {
-  DLOG(INFO) << "Destructor called for client id: " << uuid << " ip: " << GetIP();
+  DLOG(INFO) << "Destructor called for client with IP: " << GetIP();
   close(fd);
 }
 
@@ -67,6 +67,6 @@ const string SSEClient::GetIP() {
 /**
   Get a unique identifier of the client.
 */
-boost::uuids::uuid SSEClient::GetId() {
+/*boost::uuids::uuid& SSEClient::GetId() {
   return uuid;
-}
+}*/

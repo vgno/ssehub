@@ -2,6 +2,7 @@
 #include <sstream>
 #include <stdlib.h>
 #include <exception>
+#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -77,6 +78,9 @@ const string &SSEConfig::GetValue(const string& key) {
   @param key Config attribute to fetch. 
 */
 int SSEConfig::GetValueInt(const string& key) {
-  // FIXME: Probably better to use something else than atoi().
-  return atoi(ConfigKeys[key].c_str());
+  try  {
+    return boost::lexical_cast<int>(ConfigKeys[key]);
+  } catch(...) {
+    return 0;
+  }
 }
