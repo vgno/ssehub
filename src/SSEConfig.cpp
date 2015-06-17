@@ -6,6 +6,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/foreach.hpp>
+#include <boost/any.hpp>
 #include "SSEConfig.h"
 
 using namespace std;
@@ -13,9 +15,8 @@ using namespace std;
 /**
   Constructor.
 */
-SSEConfig::SSEConfig(string file) {
+SSEConfig::SSEConfig() {
   InitDefaults();
-  load(file.c_str());
 }
 
 /**
@@ -23,18 +24,18 @@ SSEConfig::SSEConfig(string file) {
 */
 void SSEConfig::InitDefaults() {
 
- ConfigKeys["server.bindip"]             = "0.0.0.0";
- ConfigKeys["server.port"]               = "8090";
- ConfigKeys["server.logdir"]             = "./";
- ConfigKeys["server.pingInterval"]       = "5";
- ConfigKeys["server.threadsPerChannel"]  = "5";
- ConfigKeys["server.channelCacheSize"]   = "500";
+ ConfigMap["server.bindip"]             = "0.0.0.0";
+ ConfigMap["server.port"]               = "8090";
+ ConfigMap["server.logdir"]             = "./";
+ ConfigMap["server.pingInterval"]       = "5";
+ ConfigMap["server.threadsPerChannel"]  = "5";
+ ConfigMap["server.channelCacheSize"]   = "500";
 
- ConfigKeys["amqp.host"]                 = "127.0.0.1";
- ConfigKeys["amqp.port"]                 = "5672";
- ConfigKeys["amqp.user"]                 = "guest";
- ConfigKeys["amqp.password"]             = "guest";
- ConfigKeys["amqp.exchange"]             = "amq.fanout";
+ ConfigMap["amqp.host"]                 = "127.0.0.1";
+ ConfigMap["amqp.port"]                 = "5672";
+ ConfigMap["amqp.user"]                 = "guest";
+ ConfigMap["amqp.password"]             = "guest";
+ ConfigMap["amqp.exchange"]             = "amq.fanout";
 
 }
 
@@ -43,24 +44,40 @@ void SSEConfig::InitDefaults() {
   @param file Filename of config to load. 
 */
 bool SSEConfig::load(const char *file) {
-    boost::property_tree::ptree pt;
+  boost::property_tree::ptree pt;
 
+  try {
+    boost::property_tree::read_json(file, pt);
+  } catch (...) {
+    return false;
+  }
+
+  // Populate ConfigMap.
+  BOOST_FOREACH(ConfigMap_t::value_type &element, ConfigMap) {
     try {
-      boost::property_tree::read_json(file, pt);
-    } catch (...) {
-      LOG(FATAL) << "Failed to parse config file.";
-      return false;
-    }  
+      string val = pt.get<std::string>(element.first);
+      ConfigMap[element.first] = val;
+      DLOG(INFO) << element.first << " = " << ConfigMap[element.first];
+    } catch (...) {}
+  }
 
-    map<string, string>::iterator it;
+  // Populate ChannelMap.
+  try {
+   BOOST_FOREACH(boost::property_tree::ptree::value_type& child, pt.get_child("channels")) {
+    try {
+      string chName = child.second.get<std::string>("path");
+      string allowedOrigins = child.second.get<std::string>("allowedOrigins");
+      int historyLength = child.second.get<int>("historyLength");
 
-    for (it = ConfigKeys.begin(); it != ConfigKeys.end();  it++) {
-      try {
-        string val = pt.get<std::string>(it->first);
-        ConfigKeys[it->first] = val;
-        DLOG(INFO) << it->first << " = " << ConfigKeys[it->first];
-      } catch (...) {}
+      ChannelMap[chName].allowedOrigins = allowedOrigins;
+      ChannelMap[chName].historyLength = historyLength;
+      } catch (boost::property_tree::ptree_error &e) {
+        LOG(FATAL) << "Invalid channel definition in config: " << e.what();
+      }
     }
+  } catch(...) {
+    DLOG(INFO) << "Warning: No channels defined in config.";
+  }
 
   return true;
 }
@@ -70,7 +87,7 @@ bool SSEConfig::load(const char *file) {
   @param key Config attribute to fetch. 
 */
 const string &SSEConfig::GetValue(const string& key) {
-  return ConfigKeys[key];
+  return ConfigMap[key];
 }
 
 /**
@@ -79,7 +96,7 @@ const string &SSEConfig::GetValue(const string& key) {
 */
 int SSEConfig::GetValueInt(const string& key) {
   try  {
-    return boost::lexical_cast<int>(ConfigKeys[key]);
+    return boost::lexical_cast<int>(ConfigMap[key]);
   } catch(...) {
     return 0;
   }

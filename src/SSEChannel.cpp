@@ -24,6 +24,7 @@ SSEChannel::SSEChannel(SSEConfig* conf, string id) {
   // Initialize a buffer containing our response for this case.
   evs_preamble_data[0] = ':';
   for (int i = 1; i <= 2048; i++) { evs_preamble_data[i] = '.'; }
+  sleep(1);
   evs_preamble_data[2049] = '\n';
   evs_preamble_data[2050] = '\0';
 
@@ -82,6 +83,23 @@ string SSEChannel::GetId() {
 void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   DLOG(INFO) << "Adding client to channel " << GetId();
 
+  // Reply with CORS headers when we get a OPTIONS request.
+  if (req->GetMethod().compare("OPTIONS") == 0) {
+    client->Send("HTTP/1.1 200 OK\r\n");
+    client->Send("Access-Control-Allow-Origin: *\r\n");
+    client->Send("Connection: close\r\n\r\n");
+    client->Destroy();
+    return;
+  }
+
+  // Disallow every other method than GET.
+  if (req->GetMethod().compare("GET") != 0) {
+    client->Send("HTTP/1.1 405 Method Not Allowed\r\n");
+    client->Send("Connection: close\r\n\r\n");
+    client->Destroy();
+    return;
+  }
+
   string lastEventId = req->GetHeader("Last-Event-ID");
   if (lastEventId.empty()) lastEventId = req->GetQueryString("evs_last_event_id");
   if (lastEventId.empty()) lastEventId = req->GetQueryString("lastEventId");
@@ -92,18 +110,20 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   client->Send("\r\n");
   client->Send(":ok\n\n");
 
-  // Send preamble if polyfill requests it.
+  // Send preamble if polyfill require it.
   if (!req->GetQueryString("evs_preamble").empty()) {
     client->Send(evs_preamble_data);
   }
 
+  // Send event history if requested.
   if (!lastEventId.empty()) {
     SendEventsSince(client, lastEventId);
   }
 
+  // Add client to handler thread in a round-robin fashion.
   (*curthread)->AddClient(client); 
-
   curthread++;
+
   if (curthread == clientpool.end()) curthread = clientpool.begin();
 }
 

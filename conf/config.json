@@ -13,5 +13,19 @@
     "user": "guest",
     "password": "guest",
     "exchange": "amq.fanout"
-  }
+  },
+  "channels": [
+    {
+        "path": "test",
+        "allowedOrigins": ["https://some.host"],
+        "historyUrl": "https://some.url/which/talks/json",
+        "historyLength": 50
+    },
+    {
+        "path": "test2",
+        "allowedOrigins": ["https://some.host"],
+        "historyUrl": "https://some.url/which/talks/json",
+        "historyLength": 50
+    }
+  ]
 }
