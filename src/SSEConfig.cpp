@@ -77,7 +77,9 @@ bool SSEConfig::load(const char *file) {
       }
     }
   } catch(...) {
-    DLOG(INFO) << "Warning: No channels defined in config.";
+    if (!GetValueBool("server.allowUndefinedChannels")) {
+      DLOG(FATAL) << "Error: No channels defined in config and allowUndefinedChannels is disabled.";
+    }
   }
 
   return true;
