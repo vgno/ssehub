@@ -250,5 +250,5 @@ void SSEChannel::GetStats(SSEChannelStats* stats) {
   stats->num_clients            = num_clients;
   stats->num_broadcasted_events = num_broadcasted_events;
   stats->num_cached_events      = cache_keys.size();
-  stats->cache_size             = config.server->GetValueInt("server.channelCacheSize");
+  stats->cache_size             = config.historyLength;
 }
