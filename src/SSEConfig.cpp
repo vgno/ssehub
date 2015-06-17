@@ -24,18 +24,19 @@ SSEConfig::SSEConfig() {
 */
 void SSEConfig::InitDefaults() {
 
- ConfigMap["server.bindip"]             = "0.0.0.0";
- ConfigMap["server.port"]               = "8090";
- ConfigMap["server.logdir"]             = "./";
- ConfigMap["server.pingInterval"]       = "5";
- ConfigMap["server.threadsPerChannel"]  = "5";
- ConfigMap["server.channelCacheSize"]   = "500";
+ ConfigMap["server.bindip"]                   = "0.0.0.0";
+ ConfigMap["server.port"]                     = "8090";
+ ConfigMap["server.logdir"]                   = "./";
+ ConfigMap["server.pingInterval"]             = "5";
+ ConfigMap["server.threadsPerChannel"]        = "5";
+ ConfigMap["server.channelCacheSize"]         = "500";
+ ConfigMap["server.allowUndefinedChannels"]   = "true";
 
- ConfigMap["amqp.host"]                 = "127.0.0.1";
- ConfigMap["amqp.port"]                 = "5672";
- ConfigMap["amqp.user"]                 = "guest";
- ConfigMap["amqp.password"]             = "guest";
- ConfigMap["amqp.exchange"]             = "amq.fanout";
+ ConfigMap["amqp.host"]                       = "127.0.0.1";
+ ConfigMap["amqp.port"]                       = "5672";
+ ConfigMap["amqp.user"]                       = "guest";
+ ConfigMap["amqp.password"]                   = "guest";
+ ConfigMap["amqp.exchange"]                   = "amq.fanout";
 
 }
 
@@ -100,4 +101,13 @@ int SSEConfig::GetValueInt(const string& key) {
   } catch(...) {
     return 0;
   }
+}
+
+/**
+ *  Fetch a config attribute and return as a boolean.
+ *  @param key Config attribute to fetch.
+*/
+bool SSEConfig::GetValueBool(const string& key) {
+    if (ConfigMap[key].compare("true") == 0) return true;
+      return false;
 }

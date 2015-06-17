@@ -63,6 +63,11 @@ void SSEServer::AmqpCallback(string key, string msg) {
   SSEChannel *ch = GetChannel(chName);
   
   if (ch == NULL) {
+    if (!config->GetValueBool("server.allowUndefinedChannels")) {
+        DLOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
+        return;
+    }
+
     ch = new SSEChannel(config, chName);
     channels.push_back(SSEChannelPtr(ch));
   }

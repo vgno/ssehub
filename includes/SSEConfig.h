@@ -19,6 +19,7 @@ class SSEConfig {
     SSEConfig();
     const string &GetValue(const string& key);
     int GetValueInt(const string& key);
+    bool GetValueBool(const string& key);
 
   private:
     void InitDefaults();
