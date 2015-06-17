@@ -11,16 +11,15 @@
 #include <amqp_framing.h>
 #include <pthread.h>
 #include <boost/shared_ptr.hpp>
+#include "SSEConfig.h"
 
 using namespace std;
 
 // Forward declarations.
 class SSEEvent;
 class SSEClient;
-class SSEConfig;
 class SSEClientHandler;
 class HTTPRequest;
-
 
 typedef boost::shared_ptr<SSEEvent> SSEEventPtr;
 typedef boost::shared_ptr<SSEClientHandler> ClientHandlerPtr;
@@ -35,7 +34,7 @@ struct SSEChannelStats {
 
 class SSEChannel {
   public:
-    SSEChannel(SSEConfig*, string);
+    SSEChannel(ChannelConfig& conf, string id);
     ~SSEChannel();
     string GetId();
     void AddClient(SSEClient* client, HTTPRequest* req);
@@ -51,7 +50,7 @@ class SSEChannel {
     long num_broadcasted_events;
     map<string, string> request_headers;
     ClientHandlerList::iterator curthread;
-    SSEConfig *config;
+    ChannelConfig config;
     pthread_t _pingthread;
     deque<string> cache_keys;
     map<string, SSEEventPtr> cache_data;

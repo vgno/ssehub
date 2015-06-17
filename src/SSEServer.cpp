@@ -5,6 +5,7 @@
 #include "SSEEvent.h"
 #include "SSEConfig.h"
 #include "SSEChannel.h"
+#include <boost/foreach.hpp>
 
 using namespace std;
 
@@ -68,7 +69,7 @@ void SSEServer::AmqpCallback(string key, string msg) {
         return;
     }
 
-    ch = new SSEChannel(config, chName);
+    ch = new SSEChannel(config->GetDefaultChannelConfig(), chName);
     channels.push_back(SSEChannelPtr(ch));
   }
 
@@ -85,6 +86,8 @@ void SSEServer::Run() {
       config->GetValue("amqp.user"),config->GetValue("amqp.password"), 
       config->GetValue("amqp.exchange"), "", 
       SSEServer::AmqpCallbackWrapper, this);
+
+  InitChannels();
 
   pthread_create(&routerThread, NULL, &SSEServer::RouterThreadMain, this);
   AcceptLoop();
@@ -119,6 +122,16 @@ void SSEServer::InitSocket() {
 
   efd = epoll_create1(0);
   LOG_IF(FATAL, efd == -1) << "epoll_create1 failed.";
+}
+
+/**
+  Initialize static configured channels.
+*/
+void SSEServer::InitChannels() {
+  BOOST_FOREACH(ChannelMap_t::value_type& chConf, config->GetChannels()) {
+    SSEChannel* ch = new SSEChannel(chConf.second, chConf.first);
+    channels.push_back(SSEChannelPtr(ch));
+  }
 }
 
 /**

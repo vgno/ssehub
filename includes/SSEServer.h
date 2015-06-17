@@ -50,6 +50,7 @@ class SSEServer {
     void ClientRouterLoop();
     static void AmqpCallbackWrapper(void *, const string, const string);
     void AmqpCallback(string, string);
+    void InitChannels();
     SSEChannel* GetChannel(const string id);
 };
 

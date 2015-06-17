@@ -8,6 +8,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 #include <boost/any.hpp>
+#include <boost/optional.hpp>
 #include "SSEConfig.h"
 
 using namespace std;
@@ -23,7 +24,6 @@ SSEConfig::SSEConfig() {
   Initialize some sane default config values.
 */
 void SSEConfig::InitDefaults() {
-
  ConfigMap["server.bindip"]                   = "0.0.0.0";
  ConfigMap["server.port"]                     = "8090";
  ConfigMap["server.logdir"]                   = "./";
@@ -38,6 +38,8 @@ void SSEConfig::InitDefaults() {
  ConfigMap["amqp.password"]                   = "guest";
  ConfigMap["amqp.exchange"]                   = "amq.fanout";
 
+ ConfigMap["default.historyLength"]           = "50";
+ ConfigMap["default.historyUrl"]              = "";
 }
 
 /**
@@ -47,6 +49,7 @@ void SSEConfig::InitDefaults() {
 bool SSEConfig::load(const char *file) {
   boost::property_tree::ptree pt;
 
+  // Read config file.
   try {
     boost::property_tree::read_json(file, pt);
   } catch (...) {
@@ -62,27 +65,67 @@ bool SSEConfig::load(const char *file) {
     } catch (...) {}
   }
 
+  // Load channels defined in configuration.
+  LoadChannels(pt);
+
+  return true;
+}
+
+/**
+  Load static configured channels from config.
+  @param pt Configuration ptree.
+*/
+void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
+  // Set up DefaultChannelConfig.
+  DefaultChannelConfig.server = this;
+  DefaultChannelConfig.historyLength = GetValueInt("default.historyLength");
+  DefaultChannelConfig.historyUrl = GetValueInt("default.historyUrl");
+
+  // Get default allowedOrigins.
+  try {
+    GetArray(DefaultAllowedOrigins, pt.get_child("default.allowedOrigins"));
+  } catch(boost::property_tree::ptree_error& e) {
+    LOG(FATAL) << "Failed to fetch default allowedOrigins from config: " << e.what();
+  }
+
   // Populate ChannelMap.
   try {
    BOOST_FOREACH(boost::property_tree::ptree::value_type& child, pt.get_child("channels")) {
-    try {
-      string chName = child.second.get<std::string>("path");
-      string allowedOrigins = child.second.get<std::string>("allowedOrigins");
-      int historyLength = child.second.get<int>("historyLength");
+    string chName;
 
-      ChannelMap[chName].allowedOrigins = allowedOrigins;
-      ChannelMap[chName].historyLength = historyLength;
-      } catch (boost::property_tree::ptree_error &e) {
-        LOG(FATAL) << "Invalid channel definition in config: " << e.what();
-      }
+    // Get channel name.
+    try {
+      chName = child.second.get<std::string>("path");
+    } catch (boost::property_tree::ptree_error& e) {
+      LOG(FATAL) << "Invalid channel definition in config: " << e.what();
     }
+
+    // Pointer to this SSEConfig instance.
+    ChannelMap[chName].server = this;
+
+    // Get allowedOrigins for the channel or use the default.
+    try {
+      GetArray(ChannelMap[chName].allowedOrigins, child.second.get_child("allowedOrigins"));
+    } catch (...) {
+      LOG(INFO) << "Failed to get allowedOrigins for channel " << chName << ", using defaults.";
+      ChannelMap[chName].allowedOrigins = DefaultAllowedOrigins;
+    }
+
+    // Optional channel parameters.
+    ChannelMap[chName].historyUrl = child.second.get<std::string>("historyUrl", DefaultChannelConfig.historyUrl);
+    ChannelMap[chName].historyLength = child.second.get<int>("historyLength", DefaultChannelConfig.historyLength);
+   }
   } catch(...) {
     if (!GetValueBool("server.allowUndefinedChannels")) {
       DLOG(FATAL) << "Error: No channels defined in config and allowUndefinedChannels is disabled.";
     }
   }
+}
 
-  return true;
+void SSEConfig::GetArray(vector<std::string>& target, boost::property_tree::ptree& pt) {
+  BOOST_FOREACH(boost::property_tree::ptree::value_type& child, pt) {
+    target.push_back(child.second.get_value<std::string>());
+  }
 }
 
 /**
@@ -112,4 +155,18 @@ int SSEConfig::GetValueInt(const string& key) {
 bool SSEConfig::GetValueBool(const string& key) {
     if (ConfigMap[key].compare("true") == 0) return true;
       return false;
+}
+
+/**
+  Returns ChannelMap.
+*/
+ChannelMap_t& SSEConfig::GetChannels() {
+  return ChannelMap;
+}
+
+/**
+ Returns config for dynamicly added channels.
+*/
+ChannelConfig& SSEConfig::GetDefaultChannelConfig() {
+  return DefaultChannelConfig;
 }

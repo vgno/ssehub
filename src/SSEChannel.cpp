@@ -12,12 +12,14 @@ using namespace std;
   @param conf Pointer to SSEConfig instance holding our configuration.
   @param id Unique identifier for this channel.
 */
-SSEChannel::SSEChannel(SSEConfig* conf, string id) {
+SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   this->id = id;
   this->config = conf;
   num_broadcasted_events = 0;
   DLOG(INFO) << "Initializing channel " << id;
-  DLOG(INFO) << "Threads per channel: " << config->GetValue("server.threadsPerChannel");
+  DLOG(INFO) << "History length: " << config.historyLength;
+  DLOG(INFO) << "History URL: " << config.historyUrl;
+  DLOG(INFO) << "Threads per channel: " << config.server->GetValue("server.threadsPerChannel");
 
   // Internet Explorer has a problem receiving data when using XDomainRequest before it has received 2KB of data. 
   // The polyfills that account for this send a query parameter, evs_preamble to inform the server about this so it can respond with some initial data.
@@ -52,7 +54,7 @@ SSEChannel::~SSEChannel() {
 void SSEChannel::InitializeThreads() {
   int i;
 
-  for (i = 0; i < config->GetValueInt("server.threadsPerChannel"); i++) {
+  for (i = 0; i < config.server->GetValueInt("server.threadsPerChannel"); i++) {
     clientpool.push_back(ClientHandlerPtr(new SSEClientHandler(i)));
   }
 
@@ -168,8 +170,8 @@ void SSEChannel::CacheEvent(SSEEvent* event) {
 
   cache_data[event->getid()] = SSEEventPtr(event);
 
-  // Delete the oldest cache object if we hit the channelCacheSize limit.
-  if ((int)cache_keys.size() > config->GetValueInt("server.channelCacheSize")) {
+  // Delete the oldest cache object if we hit the historyLength limit.
+  if ((int)cache_keys.size() > config.historyLength) {
     string& firstElementId = *(cache_keys.begin());
     cache_data.erase(firstElementId);
     cache_keys.erase(cache_keys.begin());
@@ -207,7 +209,7 @@ void *SSEChannel::PingThread(void *pThis) {
 void SSEChannel::Ping() {
   while(1) {
     Broadcast(":\n");
-    sleep(config->GetValueInt("server.pingInterval"));
+    sleep(config.server->GetValueInt("server.pingInterval"));
   }
 }
 
@@ -249,5 +251,5 @@ void SSEChannel::GetStats(SSEChannelStats* stats) {
   stats->num_clients            = num_clients;
   stats->num_broadcasted_events = num_broadcasted_events;
   stats->num_cached_events      = cache_keys.size();
-  stats->cache_size             = config->GetValueInt("server.channelCacheSize");
+  stats->cache_size             = config.server->GetValueInt("server.channelCacheSize");
 }

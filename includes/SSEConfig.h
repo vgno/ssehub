@@ -2,12 +2,15 @@
 #define CONFIG_H
 #include <map>
 #include <string>
+#include <boost/property_tree/ptree.hpp>
 
 using namespace std;
 
 struct ChannelConfig {
-  std::string allowedOrigins;
-  int historyLength;
+  class SSEConfig*    server;
+  std::vector<string> allowedOrigins;
+  std::string         historyUrl;
+  int                 historyLength;
 };
 
 typedef std::map<const std::string, std::string> ConfigMap_t;
@@ -20,11 +23,17 @@ class SSEConfig {
     const string &GetValue(const string& key);
     int GetValueInt(const string& key);
     bool GetValueBool(const string& key);
+    ChannelMap_t& GetChannels();
+    ChannelConfig& GetDefaultChannelConfig();
 
   private:
     void InitDefaults();
+    void GetArray(vector<std::string>& target, boost::property_tree::ptree& pt);
+    void LoadChannels(boost::property_tree::ptree& pt);
     ConfigMap_t ConfigMap;
     ChannelMap_t ChannelMap;
+    ChannelConfig DefaultChannelConfig;
+    vector<std::string> DefaultAllowedOrigins;
 };
 
 #endif
