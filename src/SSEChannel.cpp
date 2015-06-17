@@ -26,7 +26,6 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   // Initialize a buffer containing our response for this case.
   evs_preamble_data[0] = ':';
   for (int i = 1; i <= 2048; i++) { evs_preamble_data[i] = '.'; }
-  sleep(1);
   evs_preamble_data[2049] = '\n';
   evs_preamble_data[2050] = '\0';
 
