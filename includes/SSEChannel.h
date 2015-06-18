@@ -55,7 +55,7 @@ class SSEChannel {
     map<string, SSEEventPtr> cache_data;
     ClientHandlerList clientpool;
     bool allowAllOrigins;
-    char evs_preamble_data[2051];
+    char evs_preamble_data[2052];
 
     void InitializeThreads();
     void CleanupThreads();

@@ -35,7 +35,8 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   evs_preamble_data[0] = ':';
   for (int i = 1; i <= 2048; i++) { evs_preamble_data[i] = '.'; }
   evs_preamble_data[2049] = '\n';
-  evs_preamble_data[2050] = '\0';
+  evs_preamble_data[2050] = '\n';
+  evs_preamble_data[2051] = '\0';
 
   InitializeThreads();
 }
@@ -90,17 +91,17 @@ void SSEChannel::SetCorsHeaders(HTTPRequest& req, HTTPResponse& res) {
     return;
   }
 
-  const string& referer = req.GetHeader("Referer");
+  const string& originHeader = req.GetHeader("Origin");
 
-  // If Referer header is not set in the request don't set any CORS headers.
-  if (referer.empty()) {
-    DLOG(INFO) << "No Referer in request, not setting cors headers.";
+  // If Origin header is not set in the request don't set any CORS headers.
+  if (originHeader.empty()) {
+    DLOG(INFO) << "No Origin header in request, not setting cors headers.";
     return;
   }
 
-  // If referer matches one of the origins in the allowedOrigins array use that in the CORS header.
+  // If Origin matches one of the origins in the allowedOrigins array use that in the CORS header.
   BOOST_FOREACH(const std::string& origin, config.allowedOrigins) {
-    if (referer.compare(0, origin.size(), origin) == 0) {
+    if (originHeader.compare(0, origin.size(), origin) == 0) {
       res.SetHeader("Access-Control-Allow-Origin", origin);
       DLOG(INFO) << "Referer matches origin " << origin;
       return;

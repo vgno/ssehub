@@ -226,7 +226,7 @@ void *SSEServer::RouterThreadMain(void *pThis) {
   Read request and route client to the requested channel.
 */
 void SSEServer::ClientRouterLoop() {
-  char buf[512];
+  char buf[4096];
   boost::shared_ptr<struct epoll_event[]> eventList(new struct epoll_event[MAXEVENTS]);
   
   DLOG(INFO) << "Started client router thread.";
@@ -246,7 +246,7 @@ void SSEServer::ClientRouterLoop() {
       }
 
       // Read from client.
-      size_t len = client->Read(&buf, 512);
+      size_t len = client->Read(&buf, 4096);
       buf[len] = '\0';
 
       // Parse the request.

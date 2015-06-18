@@ -18,8 +18,8 @@ class HTTPRequest {
     const string& GetPath();
     const string& GetMethod();
     const map<string, string>& GetHeaders();
-    const string GetHeader(const string& header);
-    const string GetQueryString(const std::string& param);
+    const string GetHeader(string header);
+    const string GetQueryString(string param);
     size_t NumQueryString();
 
   private:

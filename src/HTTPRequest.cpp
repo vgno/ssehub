@@ -1,5 +1,6 @@
 #include <glog/logging.h>
 #include <string.h>
+#include <boost/algorithm/string.hpp>
 #include "HTTPRequest.h"
 
 /**
@@ -39,25 +40,17 @@ bool HTTPRequest::Parse(const char *data, int len) {
   }
 
   if (phr_path_len > 0) {
-    // Assume there is a querystring present if the URI contains a ?.
-    const char* qstr_pos = strchr((const char*)phr_path, '?');
-    if (qstr_pos != NULL) { // URI contains a ?
-      // Calculate the actual length of the path and query string. 
-      size_t path_len = qstr_pos - phr_path;
-      size_t qstr_len = (phr_path_len - path_len) - 1;
+    string rawPath;
+    rawPath.insert(0, phr_path, phr_path_len);
 
-      // Copy the path into path variable.
-      path.insert(0, phr_path, path_len);
-
-      // Copy the querystring into a variable.
-      string qstr;
-      qstr.insert(0, qstr_pos+1, qstr_len);
-
-      // Parse the querystring (+1 to skip the ?).
-      ParseQueryString(qstr);
+    size_t qsPos = rawPath.find_first_of('?', 0);
+    if (qsPos != string::npos) {
+      string qStr;
+      qStr = rawPath.substr(qsPos+1, string::npos);
+      path = rawPath.substr(0, qsPos);
+      ParseQueryString(qStr);
     } else {
-      // No querystring present - just copy the whole path.
-      path.insert(0, phr_path, phr_path_len);
+      path = rawPath.substr(0, rawPath.find_last_of(' ', 0));
     }
   }
 
@@ -68,6 +61,7 @@ bool HTTPRequest::Parse(const char *data, int len) {
     string name, value; 
     name.insert(0, phr_headers[i].name, phr_headers[i].name_len);
     value.insert(0, phr_headers[i].value, phr_headers[i].value_len);
+    boost::to_lower(name);
     headers[name] = value;
   }
 
@@ -92,7 +86,9 @@ const string& HTTPRequest::GetMethod() {
   Get a spesific header.
   @param header Header to get.
 **/
-const string HTTPRequest::GetHeader(const string& header) {
+const string HTTPRequest::GetHeader(string header) {
+  boost::to_lower(header);
+
   if (headers.find(header) != headers.end()) {
     return headers[header];
   }
@@ -134,6 +130,7 @@ size_t HTTPRequest::ParseQueryString(const std::string& buf) {
     prevpos = eqlpos+len;
 
     if (!param.empty() && !val.empty()) {
+      boost::to_lower(param);
       qsmap[param] = val;
     }
   }
@@ -145,7 +142,9 @@ size_t HTTPRequest::ParseQueryString(const std::string& buf) {
   Get a spesific query string parameter.
   @param param Parameter to get.
 **/
-const string HTTPRequest::GetQueryString(const std::string& param) {
+const string HTTPRequest::GetQueryString(string param) {
+  boost::to_lower(param);
+
   if (qsmap.find(param) != qsmap.end()) {
     return qsmap[param];
   }
