@@ -20,6 +20,7 @@ class SSEEvent;
 class SSEClient;
 class SSEClientHandler;
 class HTTPRequest;
+class HTTPResponse;
 
 typedef boost::shared_ptr<SSEEvent> SSEEventPtr;
 typedef boost::shared_ptr<SSEClientHandler> ClientHandlerPtr;
@@ -46,23 +47,21 @@ class SSEChannel {
 
   private:
     string id;
-    string header_data;
     long num_broadcasted_events;
-    map<string, string> request_headers;
     ClientHandlerList::iterator curthread;
     ChannelConfig config;
     pthread_t _pingthread;
     deque<string> cache_keys;
     map<string, SSEEventPtr> cache_data;
     ClientHandlerList clientpool;
-    char evs_preamble_data[2050];
+    bool allowAllOrigins;
+    char evs_preamble_data[2051];
 
-    void AddResponseHeader(const string& header, const string& val);
-    void CommitHeaderData();
     void InitializeThreads();
     void CleanupThreads();
     void Ping();
     static void* PingThread(void*);
+    void SetCorsHeaders(HTTPRequest& req, HTTPResponse& res);
 };
 
 typedef boost::shared_ptr<SSEChannel> SSEChannelPtr;

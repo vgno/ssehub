@@ -3,3 +3,4 @@ ssehub
 .*.swp
 *.sublime-*
 test/*
+.ycm_extra_conf.py

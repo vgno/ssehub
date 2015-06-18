@@ -4,6 +4,8 @@
 #include "SSEEvent.h"
 #include "SSEConfig.h"
 #include "HTTPRequest.h"
+#include "HTTPResponse.h"
+#include <boost/foreach.hpp>
 
 using namespace std;
 
@@ -21,6 +23,12 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   DLOG(INFO) << "History URL: " << config.historyUrl;
   DLOG(INFO) << "Threads per channel: " << config.server->GetValue("server.threadsPerChannel");
 
+  allowAllOrigins = (config.allowedOrigins.size() < 1) ? true : false;
+
+  BOOST_FOREACH(const std::string& origin, config.allowedOrigins) {
+    DLOG(INFO) << "Allowed origin: " << origin;     
+  }
+
   // Internet Explorer has a problem receiving data when using XDomainRequest before it has received 2KB of data. 
   // The polyfills that account for this send a query parameter, evs_preamble to inform the server about this so it can respond with some initial data.
   // Initialize a buffer containing our response for this case.
@@ -28,12 +36,6 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   for (int i = 1; i <= 2048; i++) { evs_preamble_data[i] = '.'; }
   evs_preamble_data[2049] = '\n';
   evs_preamble_data[2050] = '\0';
-
-  AddResponseHeader("Content-Type", "text/event-stream");
-  AddResponseHeader("Cache-Control", "no-cache");
-  AddResponseHeader("Connection", "keep-alive");
-  AddResponseHeader("Access-Control-Allow-Origin", "*"); // This is temporary.
-  CommitHeaderData();
 
   InitializeThreads();
 }
@@ -77,26 +79,59 @@ string SSEChannel::GetId() {
 }
 
 /**
+ Set correct CORS headers.
+ @param req Request object.
+ @param res Response object.
+*/
+void SSEChannel::SetCorsHeaders(HTTPRequest& req, HTTPResponse& res) {
+  if (allowAllOrigins) {
+    DLOG(INFO) << "All origins allowed.";
+    res.SetHeader("Access-Control-Allow-Origin", "*");
+    return;
+  }
+
+  const string& referer = req.GetHeader("Referer");
+
+  // If Referer header is not set in the request don't set any CORS headers.
+  if (referer.empty()) {
+    DLOG(INFO) << "No Referer in request, not setting cors headers.";
+    return;
+  }
+
+  // If referer matches one of the origins in the allowedOrigins array use that in the CORS header.
+  BOOST_FOREACH(const std::string& origin, config.allowedOrigins) {
+    if (referer.compare(0, origin.size(), origin) == 0) {
+      res.SetHeader("Access-Control-Allow-Origin", origin);
+      DLOG(INFO) << "Referer matches origin " << origin;
+      return;
+    }
+  }
+}
+
+/**
   Adds a client to one of the client handlers assigned to the channel.
   Clients is distributed evenly across the client handler threads.
   @param client SSEClient pointer.
 */
 void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
+  HTTPResponse res;
   DLOG(INFO) << "Adding client to channel " << GetId();
 
-  // Reply with CORS headers when we get a OPTIONS request.
-  if (req->GetMethod().compare("OPTIONS") == 0) {
-    client->Send("HTTP/1.1 200 OK\r\n");
-    client->Send("Access-Control-Allow-Origin: *\r\n");
-    client->Send("Connection: close\r\n\r\n");
+  // Send CORS headers.
+  SetCorsHeaders(*req, res);
+
+  // Disallow every other method than GET.
+  if (req->GetMethod().compare("GET") != 0) {
+    res.SetStatus(405, "Method Not Allowed");
+    client->Send(res.Get());
     client->Destroy();
     return;
   }
 
-  // Disallow every other method than GET.
-  if (req->GetMethod().compare("GET") != 0) {
-    client->Send("HTTP/1.1 405 Method Not Allowed\r\n");
-    client->Send("Connection: close\r\n\r\n");
+  // Reply with CORS headers when we get a OPTIONS request.
+  if (req->GetMethod().compare("OPTIONS") == 0) {
+    res.SetHeader("Access-Control-Allow-Origin", "*");
+    client->Send(res.Get());
     client->Destroy();
     return;
   }
@@ -106,15 +141,17 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   if (lastEventId.empty()) lastEventId = req->GetQueryString("lastEventId");
 
   // Send initial response headers, etc.
-  client->Send("HTTP/1.1 200 OK\r\n");
-  client->Send(header_data);
-  client->Send("\r\n");
-  client->Send(":ok\n\n");
+  res.SetHeader("Content-Type", "text/event-stream");
+  res.SetHeader("Cache-Control", "no-cache");
+  res.SetHeader("Connection", "keep-alive");
+  res.SetBody(":ok\n\n");
 
   // Send preamble if polyfill require it.
   if (!req->GetQueryString("evs_preamble").empty()) {
-    client->Send(evs_preamble_data);
+    res.AppendBody(evs_preamble_data);
   }
+
+  client->Send(res.Get());
 
   // Send event history if requested.
   if (!lastEventId.empty()) {
@@ -207,32 +244,9 @@ void *SSEChannel::PingThread(void *pThis) {
 */
 void SSEChannel::Ping() {
   while(1) {
-    Broadcast(":\n");
+    Broadcast(":\n\n");
     sleep(config.server->GetValueInt("server.pingInterval"));
   }
-}
-
-/**
-  Add header to response.
-  @param header Header name.
-  @param val Header content.
-*/
-void SSEChannel::AddResponseHeader(const string& header, const string& val) {
-  request_headers[header] = val;
-}
-
-/**
- Composes a string (this->header_data) of the headers added by AddResponseHeader.
-*/
-void SSEChannel::CommitHeaderData() {
-  stringstream header_data_ss;
-  map<string, string>::iterator it;
-
-  for (it = request_headers.begin(); it != request_headers.end(); it++) {
-    header_data_ss << it->first << ": " << it->second << "\r\n"; 
-  }
-
-  header_data = header_data_ss.str();
 }
 
 /**

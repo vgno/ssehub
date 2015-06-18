@@ -16,7 +16,7 @@
   },
   "default": {
     "historyLength": 500,
-    "allowedOrigins": [ "*" ]
+    "allowedOrigins":  "*"
   },
   "channels": [
     {
