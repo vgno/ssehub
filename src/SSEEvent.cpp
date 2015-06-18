@@ -1,5 +1,6 @@
 #include <exception>
 #include <boost/algorithm/string.hpp>
+#include "Common.h"
 #include "SSEEvent.h"
 
 using namespace std;

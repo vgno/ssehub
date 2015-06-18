@@ -1,5 +1,6 @@
 #include <sstream>
 #include <boost/foreach.hpp>
+#include "Common.h"
 #include "HTTPResponse.h"
 
 #define CRLF "\r\n"

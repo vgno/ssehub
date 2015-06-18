@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include "Common.h"
 #include "AMQPConsumer.h"
 
 using namespace std;
@@ -153,7 +154,7 @@ bool AMQPConsumer::Connect() {
     Reconnect(5);
   }
 
- // DLOG(INFO) << "Bound to queue " << (char*)amqpQueueName.bytes;
+  LOG(INFO) << "Connected to AMQP server " << host << ":" << port << ".";
 
   return true;
 }

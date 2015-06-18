@@ -1,3 +1,4 @@
+#include "Common.h"
 #include "SSEChannel.h"
 #include "SSEClient.h"
 #include "SSEClientHandler.h"
@@ -18,10 +19,10 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   this->id = id;
   this->config = conf;
   num_broadcasted_events = 0;
-  DLOG(INFO) << "Initializing channel " << id;
-  DLOG(INFO) << "History length: " << config.historyLength;
-  DLOG(INFO) << "History URL: " << config.historyUrl;
-  DLOG(INFO) << "Threads per channel: " << config.server->GetValue("server.threadsPerChannel");
+  LOG(INFO) << "Initializing channel " << id;
+  LOG(INFO) << "History length: " << config.historyLength;
+  LOG(INFO) << "History URL: " << config.historyUrl;
+  LOG(INFO) << "Threads per channel: " << config.server->GetValue("server.threadsPerChannel");
 
   allowAllOrigins = (config.allowedOrigins.size() < 1) ? true : false;
 

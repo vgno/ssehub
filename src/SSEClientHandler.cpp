@@ -1,10 +1,10 @@
-#include <glog/logging.h>
 #include <sys/epoll.h>
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
+#include "Common.h"
 #include "SSEClientHandler.h"
 #include "SSEClient.h"
 

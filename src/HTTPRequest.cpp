@@ -1,6 +1,6 @@
-#include <glog/logging.h>
 #include <string.h>
 #include <boost/algorithm/string.hpp>
+#include "Common.h"
 #include "HTTPRequest.h"
 
 /**

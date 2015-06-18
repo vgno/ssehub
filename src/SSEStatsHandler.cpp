@@ -1,9 +1,9 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <glog/logging.h>
 #include <unistd.h>
 #include <string>
 #include <sstream>
+#include "Common.h"
 #include "SSEChannel.h"
 #include "SSEServer.h"
 #include "SSEClient.h"

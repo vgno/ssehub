@@ -1,6 +1,6 @@
 #include <iostream>
-#include <glog/logging.h>
 #include <signal.h>
+#include "Common.h"
 #include "SSEConfig.h"
 #include "SSEServer.h"
 

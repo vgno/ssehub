@@ -1,4 +1,3 @@
-#include <glog/logging.h>
 #include <sstream>
 #include <stdlib.h>
 #include <exception>
@@ -9,6 +8,7 @@
 #include <boost/foreach.hpp>
 #include <boost/any.hpp>
 #include <boost/optional.hpp>
+#include "Common.h"
 #include "SSEConfig.h"
 
 using namespace std;
@@ -106,7 +106,6 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
     try {
       GetArray(ChannelMap[chName].allowedOrigins, child.second.get_child("allowedOrigins"));
     } catch (...) {
-      LOG(INFO) << "Failed to get allowedOrigins for channel " << chName << ", using defaults.";
       ChannelMap[chName].allowedOrigins = DefaultAllowedOrigins;
     }
 

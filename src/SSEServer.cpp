@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include "Common.h"
 #include "SSEServer.h"
 #include "SSEClient.h"
 #include "HTTPRequest.h"
@@ -49,7 +50,7 @@ void SSEServer::AmqpCallback(string key, string msg) {
   SSEEvent* event = new SSEEvent(msg);
 
   if (!event->compile()) {
-    DLOG(ERROR) << "Discarding event with invalid format recieved on " << key;
+    LOG(ERROR) << "Discarding event with invalid format recieved on " << key;
     return;
   }
 
@@ -65,7 +66,7 @@ void SSEServer::AmqpCallback(string key, string msg) {
   
   if (ch == NULL) {
     if (!config->GetValueBool("server.allowUndefinedChannels")) {
-        DLOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
+        LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
         return;
     }
 
@@ -229,7 +230,7 @@ void SSEServer::ClientRouterLoop() {
   char buf[4096];
   boost::shared_ptr<struct epoll_event[]> eventList(new struct epoll_event[MAXEVENTS]);
   
-  DLOG(INFO) << "Started client router thread.";
+  LOG(INFO) << "Started client router thread.";
 
   while(1) {
     int n = epoll_wait(efd, eventList.get(), MAXEVENTS, -1);
@@ -240,7 +241,7 @@ void SSEServer::ClientRouterLoop() {
 
       // Close socket if an error occurs.
       if ((eventList[i].events & EPOLLERR) || (eventList[i].events & EPOLLHUP) || (!(eventList[i].events & EPOLLIN))) {
-        DLOG(ERROR) << "Error occoured while reading data from socket.";
+        LOG(WARNING) << "Error occoured while reading data from client " << client->GetIP() << ".";
         client->Destroy();
         continue;
       }
@@ -252,11 +253,9 @@ void SSEServer::ClientRouterLoop() {
       // Parse the request.
       HTTPRequest req(buf, len);
 
-      DLOG(INFO) << "Read " << len << " bytes from client: " << buf;
-
       if (!req.Success()) {
-        LOG(INFO) << "Invalid HTTP request receieved, shutting down connection.";
-        client->Send("Invalid HTTP request receieved, shutting down connection.\r\n");
+        LOG(WARNING) << "Invalid HTTP request receieved from " << client->GetIP() << " , shutting down connection.";
+        LOG(WARNING) << "Data: " << buf;
         client->Destroy();
         continue;
       }

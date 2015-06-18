@@ -1,4 +1,4 @@
-#include <glog/logging.h>
+#include "Common.h"
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "SSEClient.h"
