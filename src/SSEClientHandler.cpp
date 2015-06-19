@@ -131,7 +131,15 @@ void SSEClientHandler::Broadcast(const string msg) {
 
   for (it = client_list.begin(); it != client_list.end(); it++) {
     if (*it) {
-      (*it)->Send(msg);
+      int ret = (*it)->Send(msg);
+      if (ret == EPIPE) {
+        LOG(WARNING) << "EPIPE on client socket " << (*it)->GetIP() << " removing client.";
+        client_list.erase(it);
+      }
+    } else {
+      // This should now happen. Remove the client if the pointer is invalid.
+      LOG(ERROR) << "Invalid SSEClient pointer found, removing.";
+      client_list.erase(it);
     }
   }
 }

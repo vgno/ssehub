@@ -30,14 +30,7 @@ void SSEClient::Destroy() {
  @param data String buffer to send.
 */
 int SSEClient::Send(const string &data) {
-  int ret = send(fd, data.c_str(), data.length(), 0);
-  
-  if (ret == EPIPE) {
-    LOG(WARNING) << "EPIPE on client socket " << GetIP() << " removing client.";
-    Destroy();
-  }
-
-  return ret;
+  return send(fd, data.c_str(), data.length(), 0);
 }
 
 /**
