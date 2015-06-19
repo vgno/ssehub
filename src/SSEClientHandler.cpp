@@ -119,7 +119,6 @@ bool SSEClientHandler::RemoveClient(SSEClient* client) {
     }
   }
 
-
   return false;
 }
 

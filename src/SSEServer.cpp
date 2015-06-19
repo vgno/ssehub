@@ -201,14 +201,17 @@ void SSEServer::AcceptLoop() {
     fcntl(tmpfd, F_SETFL, O_NONBLOCK);
 
     // Add it to our epoll eventlist.
+    SSEClient* client = new SSEClient(tmpfd, &csin);
+
     struct epoll_event event;
-    event.events = EPOLLIN | EPOLLET;
-    event.data.ptr = new SSEClient(tmpfd, &csin);
+    event.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLET;
+;
+    event.data.ptr = static_cast<SSEClient*>(client);
 
     int ret = epoll_ctl(efd, EPOLL_CTL_ADD, tmpfd, &event);
     if (ret == -1) {
       LOG(ERROR) << "Could not add client to epoll eventlist: " << strerror(errno);
-      static_cast<SSEClient*>(event.data.ptr)->Destroy();
+      client->Destroy();
       continue;
     }
   }
@@ -241,8 +244,8 @@ void SSEServer::ClientRouterLoop() {
       client = static_cast<SSEClient*>(eventList[i].data.ptr);
 
       // Close socket if an error occurs.
-      if ((eventList[i].events & EPOLLERR) || (eventList[i].events & EPOLLHUP) || (!(eventList[i].events & EPOLLIN))) {
-        LOG(WARNING) << "Error occoured while reading data from client " << client->GetIP() << ".";
+      if ((eventList[i].events & EPOLLERR) || (eventList[i].events & EPOLLHUP) || ((eventList[i].events & EPOLLRDHUP))) {
+        DLOG(WARNING) << "Error occoured while reading data from client " << client->GetIP() << ".";
         client->Destroy();
         continue;
       }
