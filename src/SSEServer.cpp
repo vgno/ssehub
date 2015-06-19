@@ -52,6 +52,7 @@ void SSEServer::AmqpCallback(string key, string msg) {
 
   if (!event->compile()) {
     LOG(ERROR) << "Discarding event with invalid format recieved on " << key;
+    delete(event);
     return;
   }
 
@@ -68,6 +69,7 @@ void SSEServer::AmqpCallback(string key, string msg) {
   if (ch == NULL) {
     if (!config->GetValueBool("server.allowUndefinedChannels")) {
         LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
+        delete(event);
         return;
     }
 

@@ -30,7 +30,7 @@ void SSEClient::Destroy() {
  @param data String buffer to send.
 */
 int SSEClient::Send(const string &data) {
-  return send(fd, data.c_str(), data.length(), 0);
+  return send(fd, data.c_str(), data.length(), MSG_NOSIGNAL);
 }
 
 /**
