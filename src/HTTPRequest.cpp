@@ -1,43 +1,67 @@
+#include "Common.h"
 #include <string.h>
+#include <iostream>
 #include <boost/algorithm/string.hpp>
+#include "../lib/picohttpparser/picohttpparser.h"
 #include "Common.h"
 #include "HTTPRequest.h"
 
 /**
   Constructor.
 **/
-HTTPRequest::HTTPRequest(const char *data, int len) {
-  b_success = true;
-  Parse(data, len);
+HTTPRequest::HTTPRequest() {
+  httpReq_bytesRead = 0;
+  httpReq_bytesReadPrev = 0;
+  httpReq_isComplete = false;
+  b_success = false;
+  DLOG(INFO) << "New HTTPRequest";
 }
 
 /**
   Destructor.
 **/
-HTTPRequest::~HTTPRequest() {
-
-}
+HTTPRequest::~HTTPRequest() {}
 
 /**
   Parse the request.
   @param data Raw http request data.
   @param len Length of data.
 **/
-bool HTTPRequest::Parse(const char *data, int len) {
-  const char *phr_method, *phr_path;
-  struct phr_header phr_headers[HTTP_REQUEST_MAX_HEADERS];
-  size_t phr_num_headers, phr_method_len, phr_path_len;
-  int pret, phr_minor_version, i;
-     
+HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
+  int pret;
+ 
+  if (httpReq_isComplete) return HTTP_REQ_OK;  
+  httpReq_bytesReadPrev = httpReq_bytesRead;
+ 
+  // Request is to large.
+  if ((httpReq_bytesRead + len) > (HTTPREQ_BUFSIZ - 1)) {
+    DLOG(ERROR) << "HTTP_REQ_FAILED " << "Request to large.";
+    return HTTP_REQ_FAILED;
+  }
+
+  httpReq_bytesRead += len;
+  httpReq_buf.append(data, len);
+
   phr_num_headers = sizeof(phr_headers) / sizeof(phr_headers[0]);
 
-  pret = phr_parse_request(data, len, &phr_method, &phr_method_len, &phr_path, 
-      &phr_path_len, &phr_minor_version, phr_headers, &phr_num_headers, 0);    
+  pret = phr_parse_request(httpReq_buf.c_str(), httpReq_bytesRead, &phr_method, &phr_method_len, &phr_path, 
+      &phr_path_len, &phr_minor_version, phr_headers, &phr_num_headers, httpReq_bytesReadPrev);
 
-  if (pret < 1){
-    b_success = false;
-    return false;
+  // Parse error.
+  if (pret == -1) {
+    DLOG(ERROR) << "HTTP_REQ_FAILED";
+    return HTTP_REQ_FAILED;
   }
+
+  // Request incomplete.
+  if (pret == -2) {
+    DLOG(INFO) << "HTTP_REQ_INCOMPLETE";
+    return HTTP_REQ_INCOMPLETE;
+  }
+
+  httpReq_isComplete = true;
+  httpReq_buf[httpReq_bytesRead] = '\0';
+  DLOG(INFO) << "HTTP_REQ_OK";
 
   if (phr_path_len > 0) {
     string rawPath;
@@ -57,7 +81,7 @@ bool HTTPRequest::Parse(const char *data, int len) {
   if (phr_method_len > 0)
     method.insert(0, phr_method, phr_method_len);
 
-  for (i = 0; i < (int)phr_num_headers; i++) {
+  for (int i = 0; i < (int)phr_num_headers; i++) {
     string name, value; 
     name.insert(0, phr_headers[i].name, phr_headers[i].name_len);
     value.insert(0, phr_headers[i].value, phr_headers[i].value_len);
@@ -65,7 +89,7 @@ bool HTTPRequest::Parse(const char *data, int len) {
     headers[name] = value;
   }
 
-  return true;
+  return HTTP_REQ_OK;
 } 
 
 /**

@@ -61,7 +61,7 @@ class SSEChannel {
     void CleanupThreads();
     void Ping();
     static void* PingThread(void*);
-    void SetCorsHeaders(HTTPRequest& req, HTTPResponse& res);
+    void SetCorsHeaders(HTTPRequest* req, HTTPResponse& res);
 };
 
 typedef boost::shared_ptr<SSEChannel> SSEChannelPtr;

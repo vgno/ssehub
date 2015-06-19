@@ -3,6 +3,7 @@
 #include "SSEServer.h"
 #include "SSEClient.h"
 #include "HTTPRequest.h"
+#include "HTTPResponse.h"
 #include "SSEEvent.h"
 #include "SSEConfig.h"
 #include "SSEChannel.h"
@@ -248,36 +249,45 @@ void SSEServer::ClientRouterLoop() {
 
       // Read from client.
       size_t len = client->Read(&buf, 4096);
-      buf[len] = '\0';
-
-      // Parse the request.
-      HTTPRequest req(buf, len);
-
-      if (!req.Success()) {
-        LOG(WARNING) << "Invalid HTTP request receieved from " << client->GetIP() << " , shutting down connection.";
-        LOG(WARNING) << "Data: " << buf;
+      
+      if (len <= 0) {
         client->Destroy();
-        continue;
+        continue; 
       }
 
-      if (!req.GetPath().empty()) {
+      buf[len] = '\0';
+      
+      // Parse the request.
+      HTTPRequest* req = client->GetHttpReq();
+      HttpReqStatus reqRet = req->Parse(buf, len);
+
+      if (reqRet == HTTP_REQ_INCOMPLETE) continue;
+      
+      if  (reqRet == HTTP_REQ_FAILED) {
+        client->Destroy();
+        continue; 
+      }
+
+      if (!req->GetPath().empty()) {
         // Handle /stats endpoint.
-        if (req.GetPath().compare("/stats") == 0) {
+        if (req->GetPath().compare("/stats") == 0) {
           stats.SendToClient(client);
           client->Destroy();
           continue;
         }
 
-        string chName = req.GetPath().substr(1);
+        string chName = req->GetPath().substr(1);
         DLOG(INFO) << "CHANNEL:" << chName << ".";
         
         // substr(1) to remove the /.
         SSEChannel *ch = GetChannel(chName);
         if (ch != NULL) {
-          ch->AddClient(client, &req);
+          ch->AddClient(client, req);
           epoll_ctl(efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
         } else {
-          client->Send("Channel does not exist.\r\n");
+          HTTPResponse res;
+          res.SetBody("Channel does not exist.\n");
+          client->Send(res.Get());
           client->Destroy();
         }
       }

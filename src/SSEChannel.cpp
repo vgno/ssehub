@@ -85,14 +85,14 @@ string SSEChannel::GetId() {
  @param req Request object.
  @param res Response object.
 */
-void SSEChannel::SetCorsHeaders(HTTPRequest& req, HTTPResponse& res) {
+void SSEChannel::SetCorsHeaders(HTTPRequest* req, HTTPResponse& res) {
   if (allowAllOrigins) {
     DLOG(INFO) << "All origins allowed.";
     res.SetHeader("Access-Control-Allow-Origin", "*");
     return;
   }
 
-  const string& originHeader = req.GetHeader("Origin");
+  const string& originHeader = req->GetHeader("Origin");
 
   // If Origin header is not set in the request don't set any CORS headers.
   if (originHeader.empty()) {
@@ -120,10 +120,11 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   DLOG(INFO) << "Adding client to channel " << GetId();
 
   // Send CORS headers.
-  SetCorsHeaders(*req, res);
+  SetCorsHeaders(req, res);
 
   // Disallow every other method than GET.
   if (req->GetMethod().compare("GET") != 0) {
+    DLOG(INFO) << "Method: " << req->GetMethod();
     res.SetStatus(405, "Method Not Allowed");
     client->Send(res.Get());
     client->Destroy();
@@ -154,6 +155,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   }
 
   client->Send(res.Get());
+  client->DeleteHttpReq();
 
   // Send event history if requested.
   if (!lastEventId.empty()) {

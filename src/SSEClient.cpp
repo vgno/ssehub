@@ -1,7 +1,9 @@
 #include "Common.h"
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <boost/shared_ptr.hpp>
 #include "SSEClient.h"
+#include "HTTPRequest.h"
 
 /**
  Constructor.
@@ -11,8 +13,9 @@
 SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   this->fd = fd;
   memcpy(&_csin, csin, sizeof(struct sockaddr_in));
-//  uuid = boost::uuids::random_generator()();
   DLOG(INFO) << "Initialized client with IP: " << GetIP();
+  
+  m_httpReq = boost::shared_ptr<HTTPRequest>(new HTTPRequest());
 }
 
 /**
@@ -64,9 +67,10 @@ const string SSEClient::GetIP() {
   return ip;
 }
 
-/**
-  Get a unique identifier of the client.
-*/
-/*boost::uuids::uuid& SSEClient::GetId() {
-  return uuid;
-}*/
+HTTPRequest* SSEClient::GetHttpReq() {
+  return m_httpReq.get(); 
+}
+
+void SSEClient::DeleteHttpReq() {
+  m_httpReq.reset();
+}

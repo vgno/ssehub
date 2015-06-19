@@ -5,12 +5,8 @@
 #include <vector>
 #include <sys/epoll.h>
 #include <netinet/in.h>
-
-/*
-#include <boost/uuid/uuid.hpp> 
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-*/
+#include <boost/shared_ptr.hpp>
+#include "HTTPRequest.h"
 
 using namespace std;
 
@@ -20,15 +16,16 @@ class SSEClient {
     ~SSEClient();
     int Send(const string &data);
     size_t Read(void* buf, int len);
-    //boost::uuids::uuid& GetId();
     int Getfd();
+    HTTPRequest* GetHttpReq();
     const string GetIP();
     void Destroy();
+    void DeleteHttpReq();
 
   private:
-    //boost::uuids::uuid uuid;
     int fd;
     struct sockaddr_in _csin;
+    boost::shared_ptr<HTTPRequest> m_httpReq;
 };
 
 #endif
