@@ -3,7 +3,7 @@
 
 #include <string>
 #include <pthread.h>
-#include <deque>
+#include <list>
 #include <boost/shared_ptr.hpp>
 
 using namespace std;
@@ -12,8 +12,7 @@ using namespace std;
 class SSEClient;
 
 typedef boost::shared_ptr<SSEClient> SSEClientPtr;
-typedef vector<SSEClientPtr> SSEClientPtrList;
-typedef deque<std::string> MessageQueue;
+typedef list<SSEClientPtr> SSEClientPtrList;
 
 class SSEClientHandler {
   public:

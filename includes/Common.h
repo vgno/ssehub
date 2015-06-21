@@ -1,2 +1,2 @@
-#define NDEBUG
+//#define NDEBUG
 #include <glog/logging.h>
