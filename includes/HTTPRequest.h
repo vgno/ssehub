@@ -5,7 +5,7 @@
 #include <map>
 #include "../lib/picohttpparser/picohttpparser.h"
 
-#define HTTPREQ_BUFSIZ 4096
+#define HTTPREQ_BUFSIZ 8192
 #define HTTP_REQUEST_MAX_HEADERS 100
 
 using namespace std;
