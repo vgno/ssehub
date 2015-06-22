@@ -20,7 +20,6 @@ class SSEClientHandler {
     ~SSEClientHandler();
 
     bool AddClient(class SSEClient* client);
-    bool RemoveClient(SSEClient* client);
     long GetNumClients();
     void Broadcast(const string msg);
     void AsyncBroadcast(const string msg);

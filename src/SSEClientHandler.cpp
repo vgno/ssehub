@@ -67,11 +67,11 @@ void SSEClientHandler::CleanupMainFunc() {
 
       if ((t_events[i].events & EPOLLHUP) || (t_events[i].events & EPOLLRDHUP)) {
         DLOG(INFO) << "Thread " << id << ": Client disconnected.";
-        RemoveClient(client);
+        client->MarkAsDead();
       } else if (t_events[i].events & EPOLLERR) {
         // If an error occours on a client socket, just drop the connection.
         DLOG(INFO) << "Thread " << id << ": Error on client socket: " << strerror(errno);
-        RemoveClient(client);
+        client->MarkAsDead();
       }
     }
   }
@@ -103,44 +103,36 @@ bool SSEClientHandler::AddClient(SSEClient* client) {
   return true;
 }
 
-/**
-  Remove client from client list.
-  TODO: Optimize.
-  @param client pointer to SSEClient to remove.
-*/
-bool SSEClientHandler::RemoveClient(SSEClient* client) {
-  SSEClientPtrList::iterator it;
-
-  for (it = client_list.begin(); it != client_list.end(); it++) {
-    if ((*it).get() == client) {
-      client_list.erase(it);
-      num_clients--;
-      return true;
-    }
-  }
-
-  return false;
-}
 
 /**
   Broadcast message to all clients connected to this clienthandler.
+  Also handles the removal of disconnected client objects.
   @param msg String to broadcast.
 */
 void SSEClientHandler::Broadcast(const string msg) {
   SSEClientPtrList::iterator it;
 
   for (it = client_list.begin(); it != client_list.end(); it++) {
-    if (*it) {
-      int ret = (*it)->Send(msg);
-      if (ret == EPIPE) {
-        LOG(WARNING) << "EPIPE on client socket " << (*it)->GetIP() << " removing client.";
-        client_list.erase(it);
-      }
-    } else {
-      // This should now happen. Remove the client if the pointer is invalid.
+    SSEClientPtr& client = static_cast<SSEClientPtr&>(*it);
+
+    // Check that the client object is valid - it should always be,
+    // but better safe than sorry.
+    if (!client) {
       LOG(ERROR) << "Invalid SSEClient pointer found, removing.";
-      client_list.erase(it);
+      it = client_list.erase(it);
+      num_clients--;
+      continue;
     }
+
+    // If client is marked as dead, remove it.
+    if (client->IsDead()) {
+      DLOG(INFO) << "Client " << client->GetIP() << " is marked as dead, removing.";
+      it = client_list.erase(it);
+      num_clients--;
+      continue;
+    }
+
+    client->Send(msg);
   }
 }
 

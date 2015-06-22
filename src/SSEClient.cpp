@@ -12,6 +12,7 @@
 */
 SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   this->fd = fd;
+  _dead = false;
   memcpy(&_csin, csin, sizeof(struct sockaddr_in));
   DLOG(INFO) << "Initialized client with IP: " << GetIP();
   
@@ -23,6 +24,20 @@ SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
 */
 void SSEClient::Destroy() {
   delete(this);
+}
+
+/**
+ Returns wheter this client is marked as dead or not.
+*/
+bool SSEClient::IsDead() {
+  return _dead;
+}
+
+/**
+ Mark this client as dead.
+*/
+void SSEClient::MarkAsDead() {
+  _dead = true;
 }
 
 /**
