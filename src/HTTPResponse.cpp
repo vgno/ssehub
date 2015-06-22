@@ -1,5 +1,6 @@
 #include <sstream>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 #include "Common.h"
 #include "HTTPResponse.h"
 
@@ -8,6 +9,7 @@
 HTTPResponse::HTTPResponse() {
   m_statusCode = 200;
   m_statusMsg = "OK";
+  SetHeader("Content-Type", "text/html");
   SetHeader("Connection", "close");
 }
 
@@ -30,6 +32,9 @@ void HTTPResponse::AppendBody(const std::string& data) {
 
 const std::string HTTPResponse::Get() {
   std::stringstream ss; 
+
+  if ((m_headers["Connection"].compare("close") == 0) && m_body.size() > 0)
+    SetHeader("Content-Length", boost::lexical_cast<std::string>(m_body.size()));
 
   ss << "HTTP/1.1 " << m_statusCode << " " << m_statusMsg << CRLF;
 

@@ -8,6 +8,7 @@
 #include "SSEServer.h"
 #include "SSEClient.h"
 #include "SSEStatsHandler.h"
+#include "HTTPResponse.h"
 
 /**
   Constructor.
@@ -85,9 +86,11 @@ const std::string SSEStatsHandler::GetJSON() {
  @param client Pointer to SSEClient.
 */
 void SSEStatsHandler::SendToClient(SSEClient* client) {
-  client->Send("HTTP/1.1 200 OK\r\n");
-  client->Send("Content-Type: application/json\r\n");
-  client->Send("Cache-Control: no-cache\r\n");
-  client->Send("Connection: close\r\n\r\n");
-  client->Send(GetJSON());
+  HTTPResponse res;
+
+  res.SetHeader("Content-Type", "application/json");
+  res.SetHeader("Cache-Control", "no-cache");
+  res.SetBody(GetJSON());
+
+  client->Send(res.Get());
 } 

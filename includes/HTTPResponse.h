@@ -1,6 +1,8 @@
+#ifndef HTTPRESPONSE_H
+#define HTTPRESPONSE_H
+
 #include <string>
 #include <map>
-
 
 typedef std::map<std::string, std::string> HeaderList_t;
 
@@ -19,3 +21,5 @@ class HTTPResponse {
     std::string m_body;
     HeaderList_t m_headers;
 };
+
+#endif
