@@ -53,6 +53,7 @@ void SSEServer::AmqpCallback(string key, string msg) {
   if (!event->compile()) {
     LOG(ERROR) << "Discarding event with invalid format recieved on " << key;
     delete(event);
+    stats.invalid_events_rcv++;
     return;
   }
 
@@ -156,17 +157,10 @@ SSEChannel* SSEServer::GetChannel(const string id) {
 }
 
 /**
-  Returns an iterator object pointing to the first element in the channels list.
+  Returns a const reference to the channel list.
 */
-SSEChannelList::const_iterator SSEServer::ChannelsBegin() {
-  return channels.begin();
-}
-
-/**
-  Returns an iterator object pointing to the last element in the channels list.
-*/
-SSEChannelList::const_iterator SSEServer::ChannelsEnd() {
-  return channels.end();
+const SSEChannelList& SSEServer::GetChannelList() {
+  return channels;
 }
 
 /**
@@ -249,6 +243,7 @@ void SSEServer::ClientRouterLoop() {
       if ((eventList[i].events & EPOLLERR) || (eventList[i].events & EPOLLHUP) || ((eventList[i].events & EPOLLRDHUP))) {
         DLOG(WARNING) << "Error occoured while reading data from client " << client->GetIP() << ".";
         client->Destroy();
+        stats.router_read_errors++;
         continue;
       }
 
@@ -256,6 +251,7 @@ void SSEServer::ClientRouterLoop() {
       size_t len = client->Read(&buf, 4096);
       
       if (len <= 0) {
+        stats.router_read_errors++;
         client->Destroy();
         continue; 
       }
@@ -270,8 +266,17 @@ void SSEServer::ClientRouterLoop() {
       
       if  (reqRet == HTTP_REQ_FAILED) {
         client->Destroy();
+        stats.invalid_http_req++;
+        continue;
+      }
+
+      if  (reqRet == HTTP_REQ_TO_BIG) {
+        client->Destroy();
+        stats.oversized_http_req++;
         continue; 
       }
+
+
 
       if (!req->GetPath().empty()) {
         // Handle /stats endpoint.

@@ -258,15 +258,25 @@ void SSEChannel::Ping() {
  @param stats Pointer to SSEChannelStats struct which is to be filled with the statistics.
 **/
 void SSEChannel::GetStats(SSEChannelStats* stats) {
-  ClientHandlerList::iterator it;
-  long num_clients = 0;
+  // Reset counters.
+  stats->num_clients      = 0;
+  stats->num_connects     = 0;
+  stats->num_disconnects  = 0;
+  stats->num_errors       = 0;
 
-  for (it = clientpool.begin(); it != clientpool.end(); it++) {
-    num_clients += (*it)->GetNumClients();
-  }
-
-  stats->num_clients            = num_clients;
+  // Cache and broadcast counters.
   stats->num_broadcasted_events = num_broadcasted_events;
   stats->num_cached_events      = cache_keys.size();
   stats->cache_size             = config.historyLength;
+
+
+  // Fetch statistics from client handlers.
+  BOOST_FOREACH (const ClientHandlerPtr& handler, clientpool) {
+    const SSEClientHandlerStats& handlerStats = handler->GetStats();
+
+    stats->num_clients     += handlerStats.num_clients;
+    stats->num_connects    += handlerStats.num_connects;
+    stats->num_disconnects += handlerStats.num_disconnects;
+    stats->num_errors      += handlerStats.num_errors;
+  }
 }

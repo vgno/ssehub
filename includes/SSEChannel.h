@@ -30,6 +30,9 @@ struct SSEChannelStats {
   long num_clients;
   int  num_cached_events;
   long num_broadcasted_events;
+  long long num_errors;
+  long long num_connects;
+  long long num_disconnects;
   int  cache_size;
 };
 
@@ -50,6 +53,7 @@ class SSEChannel {
     long num_broadcasted_events;
     ClientHandlerList::iterator curthread;
     ChannelConfig config;
+    SSEChannelStats _stats;
     pthread_t _pingthread;
     deque<string> cache_keys;
     map<string, SSEEventPtr> cache_data;

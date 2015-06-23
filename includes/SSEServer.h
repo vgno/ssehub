@@ -32,8 +32,7 @@ class SSEServer {
     
     void Run();
     static void *RouterThreadMain(void *);
-    SSEChannelList::const_iterator ChannelsBegin();
-    SSEChannelList::const_iterator ChannelsEnd();
+    const SSEChannelList& GetChannelList();
 
   private:
     SSEConfig *config;

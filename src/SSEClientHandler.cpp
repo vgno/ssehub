@@ -2,8 +2,8 @@
 #include <errno.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <climits>
 #include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
 #include "Common.h"
 #include "SSEClientHandler.h"
 #include "SSEClient.h"
@@ -12,13 +12,6 @@ extern int stop;
 
 using namespace std;
 
-class MsgPair {
-  public:
-    MsgPair(SSEClientHandler* handler, std::string msg) : handler(handler), msg(msg) {}
-    SSEClientHandler* handler;
-    std::string msg;
-};
-
 /**
   Constructor.
   @param tid unique ID to identify thread.
@@ -26,11 +19,16 @@ class MsgPair {
 SSEClientHandler::SSEClientHandler(int tid) {
   DLOG(INFO) << "SSEClientHandler constructor called " << "id: " << tid;
   id = tid;
-  num_clients = 0;
+
+  _stats.num_clients     = 0;
+  _stats.num_disconnects = 0;
+  _stats.num_connects    = 0;
+  _stats.num_errors      = 0;
 
   epoll_fd = epoll_create1(0);
   LOG_IF(FATAL, epoll_fd == -1) << "epoll_create1 failed.";
 
+  pthread_mutex_init(&_bcast_mutex, NULL);
   pthread_create(&cleanup_thread, NULL, &SSEClientHandler::CleanupMain, this);
 }
 
@@ -68,10 +66,12 @@ void SSEClientHandler::CleanupMainFunc() {
       if ((t_events[i].events & EPOLLHUP) || (t_events[i].events & EPOLLRDHUP)) {
         DLOG(INFO) << "Thread " << id << ": Client disconnected.";
         client->MarkAsDead();
+        INC_LONG(_stats.num_disconnects);
       } else if (t_events[i].events & EPOLLERR) {
         // If an error occours on a client socket, just drop the connection.
         DLOG(INFO) << "Thread " << id << ": Error on client socket: " << strerror(errno);
         client->MarkAsDead();
+        INC_LONG(_stats.num_errors);
       }
     }
   }
@@ -96,9 +96,10 @@ bool SSEClientHandler::AddClient(SSEClient* client) {
   }
 
   client_list.push_back(SSEClientPtr(client));
-  num_clients++;
+  _stats.num_clients++;
+  INC_LONG(_stats.num_connects);
 
-  DLOG(INFO) << "Client added to thread id: " << id << " Numclients: " << num_clients;
+  DLOG(INFO) << "Client added to thread id: " << id << " Numclients: " << _stats.num_clients;
 
   return true;
 }
@@ -112,6 +113,7 @@ bool SSEClientHandler::AddClient(SSEClient* client) {
 void SSEClientHandler::Broadcast(const string msg) {
   SSEClientPtrList::iterator it;
 
+  pthread_mutex_lock(&_bcast_mutex);
   for (it = client_list.begin(); it != client_list.end(); it++) {
     SSEClientPtr& client = static_cast<SSEClientPtr&>(*it);
 
@@ -120,7 +122,7 @@ void SSEClientHandler::Broadcast(const string msg) {
     if (!client) {
       LOG(ERROR) << "Invalid SSEClient pointer found, removing.";
       it = client_list.erase(it);
-      num_clients--;
+      _stats.num_clients--;
       continue;
     }
 
@@ -128,34 +130,16 @@ void SSEClientHandler::Broadcast(const string msg) {
     if (client->IsDead()) {
       DLOG(INFO) << "Client " << client->GetIP() << " is marked as dead, removing.";
       it = client_list.erase(it);
-      num_clients--;
+      _stats.num_clients--;
       continue;
     }
 
     client->Send(msg);
   }
+
+  pthread_mutex_unlock(&_bcast_mutex);
 }
 
-/**
-  Handler function for AsyncBroadcast.
-*/
-void* SSEClientHandler::AsyncBroadcastFunc(void *mp) {
-  MsgPair* p = static_cast<MsgPair*>(mp);
-  p->handler->Broadcast(p->msg);
-  delete(p);
-  return NULL;
-}
-
-/**
-  Broadcast message to all clients connected to this clienthandler in a own separate thread.
-  @param msg String to broadcast.
-*/
-void SSEClientHandler::AsyncBroadcast(const string msg) {
-  pthread_t _thread;
-  pthread_create(&_thread, NULL,
-      &SSEClientHandler::AsyncBroadcastFunc, new MsgPair(this, msg));
-}
-
-long SSEClientHandler::GetNumClients() {
-  return num_clients;
+const SSEClientHandlerStats& SSEClientHandler::GetStats() {
+  return _stats;
 }

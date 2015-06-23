@@ -36,7 +36,7 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
   // Request is to large.
   if ((httpReq_bytesRead + len) > HTTPREQ_BUFSIZ) {
     DLOG(ERROR) << "HTTP_REQ_FAILED " << "Request to large.";
-    return HTTP_REQ_FAILED;
+    return HTTP_REQ_TO_BIG;
   }
 
   httpReq_bytesRead += len;

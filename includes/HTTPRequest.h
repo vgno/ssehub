@@ -13,6 +13,7 @@ using namespace std;
 enum HttpReqStatus {
   HTTP_REQ_FAILED,
   HTTP_REQ_INCOMPLETE,
+  HTTP_REQ_TO_BIG,
   HTTP_REQ_OK
 };
 
