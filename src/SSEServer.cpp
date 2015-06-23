@@ -268,21 +268,21 @@ void SSEServer::ClientRouterLoop() {
       HTTPRequest* req = client->GetHttpReq();
       HttpReqStatus reqRet = req->Parse(buf, len);
 
-      if (reqRet == HTTP_REQ_INCOMPLETE) continue;
-      
-      if  (reqRet == HTTP_REQ_FAILED) {
-        client->Destroy();
-        stats.invalid_http_req++;
-        continue;
+      switch(reqRet) {
+        case HTTP_REQ_INCOMPLETE: continue;
+
+        case HTTP_REQ_FAILED:
+         client->Destroy();
+         stats.invalid_http_req++;
+         continue;
+
+        case HTTP_REQ_TO_BIG:
+         client->Destroy();
+         stats.oversized_http_req++;
+         continue;
+
+        case HTTP_REQ_OK: break;
       }
-
-      if  (reqRet == HTTP_REQ_TO_BIG) {
-        client->Destroy();
-        stats.oversized_http_req++;
-        continue; 
-      }
-
-
 
       if (!req->GetPath().empty()) {
         // Handle /stats endpoint.
