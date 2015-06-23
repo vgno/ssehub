@@ -240,10 +240,16 @@ void SSEServer::ClientRouterLoop() {
       client = static_cast<SSEClient*>(eventList[i].data.ptr);
 
       // Close socket if an error occurs.
-      if ((eventList[i].events & EPOLLERR) || (eventList[i].events & EPOLLHUP) || ((eventList[i].events & EPOLLRDHUP))) {
-        DLOG(WARNING) << "Error occoured while reading data from client " << client->GetIP() << ".";
+      if (eventList[i].events & EPOLLERR) {
+        DLOG(WARNING) << "Error occurred while reading data from client " << client->GetIP() << ".";
         client->Destroy();
         stats.router_read_errors++;
+        continue;
+      }
+
+      if ((eventList[i].events & EPOLLHUP) || (eventList[i].events & EPOLLRDHUP)) {
+        DLOG(WARNING) << "Client " << client->GetIP() << " hung up in router thread.";
+        client->Destroy();
         continue;
       }
 
