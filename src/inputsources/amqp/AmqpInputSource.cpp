@@ -1,5 +1,5 @@
+#include "Common.h"
 #include <unistd.h>
-  #include "Common.h"
 #include "SSEConfig.h"
 #include "inputsources/amqp/AmqpInputSource.h"
 
