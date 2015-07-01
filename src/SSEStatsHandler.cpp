@@ -23,8 +23,6 @@ SSEStatsHandler::SSEStatsHandler() {
   oversized_http_req  = 0;
   invalid_events_rcv  = 0;
   router_read_errors  = 0;
-
-  _jsonData = "{ \"data\": \"No statistics gathered yet.\" }";
 }
 
 /**
@@ -57,8 +55,7 @@ void SSEStatsHandler::Update() {
   BOOST_FOREACH(const SSEChannelPtr& chan, _server->GetChannelList()) {
     boost::property_tree::ptree pt_element; 
 
-    SSEChannelStats stat;
-    chan->GetStats(&stat);
+    const SSEChannelStats& stat = chan->GetStats();;
 
     totalClients     += stat.num_clients;
     totalEvents      += stat.num_broadcasted_events;

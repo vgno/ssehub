@@ -11,6 +11,7 @@
 #include <amqp_framing.h>
 #include <pthread.h>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
 #include "SSEConfig.h"
 
 using namespace std;
@@ -25,14 +26,16 @@ class HTTPResponse;
 typedef boost::shared_ptr<SSEEvent> SSEEventPtr;
 typedef boost::shared_ptr<SSEClientHandler> ClientHandlerPtr;
 typedef vector<ClientHandlerPtr> ClientHandlerList;
+typedef boost::shared_ptr<SSEClient> SSEClientPtr;
+typedef list<SSEClientPtr> SSEClientPtrList;
 
 struct SSEChannelStats {
   long num_clients;
   int  num_cached_events;
   long num_broadcasted_events;
-  long long num_errors;
-  long long num_connects;
-  long long num_disconnects;
+  long num_errors;
+  long num_connects;
+  long num_disconnects;
   int  cache_size;
 };
 
@@ -41,30 +44,34 @@ class SSEChannel {
     SSEChannel(ChannelConfig& conf, string id);
     ~SSEChannel();
     string GetId();
-    void AddClient(SSEClient* client, HTTPRequest* req);
     void Broadcast(const string& data);
     void BroadcastEvent(SSEEvent* event);
     void CacheEvent(SSEEvent* event);
     void SendEventsSince(SSEClient* client, string lastId);
-    void GetStats(SSEChannelStats* stats);
-
+    const SSEChannelStats& GetStats();
+    void AddClient(SSEClient* client, HTTPRequest* req);
+ 
   private:
-    string id;
-    long num_broadcasted_events;
+    string _id;
+    int _efd;
+    SSEClientPtrList _clientlist;
     ClientHandlerList::iterator curthread;
-    ChannelConfig config;
+    ChannelConfig _config;
     SSEChannelStats _stats;
-    pthread_t _pingthread;
-    deque<string> cache_keys;
-    map<string, SSEEventPtr> cache_data;
-    ClientHandlerList clientpool;
-    bool allowAllOrigins;
-    char evs_preamble_data[2052];
+    boost::thread _cleanupthread;
+    boost::thread _pingthread;
+    deque<string> _cache_keys;
+    map<string, SSEEventPtr> _cache_data;
+    ClientHandlerList _clientpool;
+    bool _allow_all_origins;
+    char _evs_preamble_data[2052];
 
     void InitializeThreads();
+
+    void CleanupMain();
     void CleanupThreads();
+    void RemoveClient(SSEClient* client);
     void Ping();
-    static void* PingThread(void*);
     void SetCorsHeaders(HTTPRequest* req, HTTPResponse& res);
 };
 

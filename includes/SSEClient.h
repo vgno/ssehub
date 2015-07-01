@@ -21,13 +21,10 @@ class SSEClient {
     const string GetIP();
     void Destroy();
     void DeleteHttpReq();
-    bool IsDead();
-    void MarkAsDead();
 
   private:
-    int fd;
+    int _fd;
     struct sockaddr_in _csin;
-    bool _dead;
     boost::shared_ptr<HTTPRequest> m_httpReq;
 };
 

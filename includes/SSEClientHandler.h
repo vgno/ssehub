@@ -5,6 +5,9 @@
 #include <pthread.h>
 #include <list>
 #include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
+#include <boost/thread.hpp>
+#include "ConcurrentQueue.h"
 
 using namespace std;
 
@@ -12,36 +15,23 @@ using namespace std;
 class SSEClient;
 
 typedef boost::shared_ptr<SSEClient> SSEClientPtr;
-typedef list<SSEClientPtr> SSEClientPtrList;
-
-struct SSEClientHandlerStats {
-  long num_connects;
-  long num_disconnects;
-  long num_errors;
-  long num_clients;
-};
-
+typedef boost::weak_ptr<SSEClient> SSEWeakClientPtr;
+typedef list<SSEWeakClientPtr> SSEWeakClientPtrList;
 
 class SSEClientHandler {
   public:
     SSEClientHandler(int);
     ~SSEClientHandler();
-    bool AddClient(class SSEClient* client);
+    void AddClient(SSEClientPtr& client);
     void Broadcast(const string msg);
-    const SSEClientHandlerStats& GetStats();
 
   private:
-    int id;
-    int epoll_fd;
-    long num_clients;
-    pthread_t cleanup_thread;
-    pthread_mutex_t _bcast_mutex;
-    SSEClientPtrList client_list;
-    SSEClientHandlerStats _stats;
+    int _id;
+    SSEWeakClientPtrList _clientlist;
+    boost::thread _processorthread;
+    ConcurrentQueue<std::string> _msgqueue;
 
-    static void* CleanupMain(void* pThis);
-    void CleanupMainFunc();
-    static void* AsyncBroadcastFunc(void* mp);
+    void ProcessQueue();
 };
 
 #endif

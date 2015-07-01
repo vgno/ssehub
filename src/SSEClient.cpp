@@ -11,8 +11,7 @@
  @param csin Client sockaddr_in structure.
 */
 SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
-  this->fd = fd;
-  _dead = false;
+  _fd = fd;
   memcpy(&_csin, csin, sizeof(struct sockaddr_in));
   DLOG(INFO) << "Initialized client with IP: " << GetIP();
   
@@ -27,25 +26,11 @@ void SSEClient::Destroy() {
 }
 
 /**
- Returns wheter this client is marked as dead or not.
-*/
-bool SSEClient::IsDead() {
-  return _dead;
-}
-
-/**
- Mark this client as dead.
-*/
-void SSEClient::MarkAsDead() {
-  _dead = true;
-}
-
-/**
  Sends data to client.
  @param data String buffer to send.
 */
 int SSEClient::Send(const string &data) {
-  return send(fd, data.c_str(), data.length(), MSG_NOSIGNAL);
+  return send(_fd, data.c_str(), data.length(), MSG_NOSIGNAL);
 }
 
 /**
@@ -54,7 +39,7 @@ int SSEClient::Send(const string &data) {
  @param len Bytes to read.
 */
 size_t SSEClient::Read(void* buf, int len) {
-  return read(fd, buf, len);
+  return read(_fd, buf, len);
 }
 
 /**
@@ -62,14 +47,14 @@ size_t SSEClient::Read(void* buf, int len) {
 */
 SSEClient::~SSEClient() {
   DLOG(INFO) << "Destructor called for client with IP: " << GetIP();
-  close(fd);
+  close(_fd);
 }
 
 /**
  Returns the client file descriptor.
 */
 int SSEClient::Getfd() {
-  return fd;
+  return _fd;
 }
 
 /**

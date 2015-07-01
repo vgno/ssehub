@@ -11,10 +11,11 @@
 #include <sys/epoll.h>
 #include <signal.h>
 #include <errno.h>
+#include <vector>
+#include <string>
+#include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include "SSEStatsHandler.h"
-#include "AMQPConsumer.h"
-
 #define MAXEVENTS 1024
 
 extern int stop;
@@ -22,8 +23,9 @@ extern int stop;
 // Forward declarations.
 class SSEConfig;
 class SSEChannel;
+class SSEInputSource;
 
-typedef vector<boost::shared_ptr<SSEChannel> > SSEChannelList;
+typedef std::vector<boost::shared_ptr<SSEChannel> > SSEChannelList;
 
 class SSEServer {
   public:
@@ -31,26 +33,25 @@ class SSEServer {
     ~SSEServer();
     
     void Run();
-    static void *RouterThreadMain(void *);
     const SSEChannelList& GetChannelList();
+    SSEConfig* GetConfig();
 
   private:
-    SSEConfig *config;
-    SSEChannelList channels;
-    AMQPConsumer amqp;
+    SSEConfig *_config;
+    SSEChannelList _channels;
+    boost::shared_ptr<SSEInputSource> _datasource;
     SSEStatsHandler stats;
-    int serverSocket;
-    int efd;
-    struct sockaddr_in sin;
-    pthread_t routerThread;
+    boost::thread _routerthread;
+    int _serversocket;
+    int _efd;
+    struct sockaddr_in _sin;
     
     void InitSocket();
     void AcceptLoop();
     void ClientRouterLoop();
-    static void AmqpCallbackWrapper(void *, const string, const string);
-    void AmqpCallback(string, string);
+    void BroadcastCallback(std::string);
     void InitChannels();
-    SSEChannel* GetChannel(const string id);
+    SSEChannel* GetChannel(const std::string id);
 };
 
 #endif

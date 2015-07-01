@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <boost/foreach.hpp>
+#include <boost/bind.hpp>
 #include "Common.h"
 #include "SSEServer.h"
 #include "SSEClient.h"
@@ -7,7 +9,7 @@
 #include "SSEEvent.h"
 #include "SSEConfig.h"
 #include "SSEChannel.h"
-#include <boost/foreach.hpp>
+#include "inputsources/amqp/AmqpInputSource.h"
 
 using namespace std;
 
@@ -16,8 +18,8 @@ using namespace std;
   @param config Pointer to SSEConfig object holding our configuration.
 */
 SSEServer::SSEServer(SSEConfig *config) {
-  this->config = config;
-  stats.Init(config, this);
+  _config = config;
+  stats.Init(_config, this);
 }
 
 /**
@@ -26,20 +28,9 @@ SSEServer::SSEServer(SSEConfig *config) {
 SSEServer::~SSEServer() {
   DLOG(INFO) << "SSEServer destructor called.";
 
-  pthread_cancel(routerThread);
-  close(serverSocket);
-  close(efd);
-}
-
-/**
-  Wrapper function for AmqpCallback to satisfy the function-type pthread expects.
-  @param pThis pointer to SSEServer instance.
-  @param key AMQP routingkey,
-  @param msg AMQP message.
-*/
-void SSEServer::AmqpCallbackWrapper(void* pThis, const string key, const string msg) {
-  SSEServer* pt = static_cast<SSEServer *>(pThis);
-  pt->AmqpCallback(key, msg);
+  pthread_cancel(_routerthread.native_handle());
+  close(_serversocket);
+  close(_efd);
 }
 
 /**
@@ -47,11 +38,11 @@ void SSEServer::AmqpCallbackWrapper(void* pThis, const string key, const string 
   @param key AMQP routingkey,
   @param msg AMQP message.
 */
-void SSEServer::AmqpCallback(string key, string msg) {
+void SSEServer::BroadcastCallback(string msg) {
   SSEEvent* event = new SSEEvent(msg);
 
   if (!event->compile()) {
-    LOG(ERROR) << "Discarding event with invalid format recieved on " << key;
+    LOG(ERROR) << "Discarding event with invalid format.";
     delete(event);
     stats.invalid_events_rcv++;
     return;
@@ -60,22 +51,20 @@ void SSEServer::AmqpCallback(string key, string msg) {
   string chName;
   // If path is set in the JSON event data use that as target channel name.
   if (!event->getpath().empty()) { chName = event->getpath(); }
-  // Otherwise use the routingkey.
-  else if (!key.empty())         { chName = key; }
   // If none of the is present just return and ignore the message.
   else                           { return; }
 
   SSEChannel *ch = GetChannel(chName);
   
   if (ch == NULL) {
-    if (!config->GetValueBool("server.allowUndefinedChannels")) {
+    if (!_config->GetValueBool("server.allowUndefinedChannels")) {
         LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
         delete(event);
         return;
     }
 
-    ch = new SSEChannel(config->GetDefaultChannelConfig(), chName);
-    channels.push_back(SSEChannelPtr(ch));
+    ch = new SSEChannel(_config->GetDefaultChannelConfig(), chName);
+    _channels.push_back(SSEChannelPtr(ch));
   }
 
   ch->BroadcastEvent(event);
@@ -87,14 +76,13 @@ void SSEServer::AmqpCallback(string key, string msg) {
 void SSEServer::Run() {
   InitSocket();
 
-  amqp.Start(config->GetValue("amqp.host"), config->GetValueInt("amqp.port"), 
-      config->GetValue("amqp.user"),config->GetValue("amqp.password"), 
-      config->GetValue("amqp.exchange"), "", 
-      SSEServer::AmqpCallbackWrapper, this);
+  _datasource = boost::shared_ptr<SSEInputSource>(new AmqpInputSource());
+  _datasource->Init(this, boost::bind(&SSEServer::BroadcastCallback, this, _1));
+  _datasource->Run();
 
   InitChannels();
 
-  pthread_create(&routerThread, NULL, &SSEServer::RouterThreadMain, this);
+  _routerthread = boost::thread(&SSEServer::ClientRouterLoop, this);
   AcceptLoop();
 }
 
@@ -108,34 +96,34 @@ void SSEServer::InitSocket() {
   signal(SIGPIPE, SIG_IGN);
 
   /* Set up listening socket. */
-  serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-  LOG_IF(FATAL, serverSocket == -1) << "Error creating listening socket.";
+  _serversocket = socket(AF_INET, SOCK_STREAM, 0);
+  LOG_IF(FATAL, _serversocket == -1) << "Error creating listening socket.";
 
   /* Reuse port and address. */
-  setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on));
+  setsockopt(_serversocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on));
 
-  memset((char*)&sin, '\0', sizeof(sin));
-  sin.sin_family  = AF_INET;
-  sin.sin_port  = htons(config->GetValueInt("server.port"));
+  memset((char*)&_sin, '\0', sizeof(_sin));
+  _sin.sin_family  = AF_INET;
+  _sin.sin_port  = htons(_config->GetValueInt("server.port"));
 
-  LOG_IF(FATAL, (bind(serverSocket, (struct sockaddr*)&sin, sizeof(sin))) == -1) <<
-    "Could not bind server socket to " << config->GetValue("server.bindip") << ":" << config->GetValue("server.port");
+  LOG_IF(FATAL, (bind(_serversocket, (struct sockaddr*)&_sin, sizeof(_sin))) == -1) <<
+    "Could not bind server socket to " << _config->GetValue("server.bindip") << ":" << _config->GetValue("server.port");
 
-  LOG_IF(FATAL, (listen(serverSocket, 0)) == -1) << "Call to listen() failed.";
+  LOG_IF(FATAL, (listen(_serversocket, 0)) == -1) << "Call to listen() failed.";
 
-  LOG(INFO) << "Listening on " << config->GetValue("server.bindip")  << ":" << config->GetValue("server.port");
+  LOG(INFO) << "Listening on " << _config->GetValue("server.bindip")  << ":" << _config->GetValue("server.port");
 
-  efd = epoll_create1(0);
-  LOG_IF(FATAL, efd == -1) << "epoll_create1 failed.";
+  _efd = epoll_create1(0);
+  LOG_IF(FATAL, _efd == -1) << "epoll_create1 failed.";
 }
 
 /**
   Initialize static configured channels.
 */
 void SSEServer::InitChannels() {
-  BOOST_FOREACH(ChannelMap_t::value_type& chConf, config->GetChannels()) {
+  BOOST_FOREACH(ChannelMap_t::value_type& chConf, _config->GetChannels()) {
     SSEChannel* ch = new SSEChannel(chConf.second, chConf.first);
-    channels.push_back(SSEChannelPtr(ch));
+    _channels.push_back(SSEChannelPtr(ch));
   }
 }
 
@@ -146,7 +134,7 @@ void SSEServer::InitChannels() {
 SSEChannel* SSEServer::GetChannel(const string id) {
   SSEChannelList::iterator it;
 
-  for (it = channels.begin(); it != channels.end(); it++) {
+  for (it = _channels.begin(); it != _channels.end(); it++) {
     SSEChannel* chan = static_cast<SSEChannel*>((*it).get());
     if (chan->GetId().compare(id) == 0) {
       return chan;
@@ -160,7 +148,14 @@ SSEChannel* SSEServer::GetChannel(const string id) {
   Returns a const reference to the channel list.
 */
 const SSEChannelList& SSEServer::GetChannelList() {
-  return channels;
+  return _channels;
+}
+
+/**
+  Returns the SSEConfig object.
+*/
+SSEConfig* SSEServer::GetConfig() {
+  return _config;
 }
 
 /**
@@ -176,7 +171,7 @@ void SSEServer::AcceptLoop() {
     clen = sizeof(csin);
 
     // Accept the connection.
-    tmpfd = accept(serverSocket, (struct sockaddr*)&csin, &clen);
+    tmpfd = accept(_serversocket, (struct sockaddr*)&csin, &clen);
 
     /* Got an error ? Handle it. */
     if (tmpfd == -1) {
@@ -201,26 +196,15 @@ void SSEServer::AcceptLoop() {
 
     struct epoll_event event;
     event.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLET;
-;
     event.data.ptr = static_cast<SSEClient*>(client);
 
-    int ret = epoll_ctl(efd, EPOLL_CTL_ADD, tmpfd, &event);
+    int ret = epoll_ctl(_efd, EPOLL_CTL_ADD, tmpfd, &event);
     if (ret == -1) {
       LOG(ERROR) << "Could not add client to epoll eventlist: " << strerror(errno);
       client->Destroy();
       continue;
     }
   }
-}
-
-/**
-  Wrapper function for ClientRouterLoop to satisfy the function-type pthread expects.
-  @param pThis Pointer to the running SSEServer instance.
-*/
-void *SSEServer::RouterThreadMain(void *pThis) {
-  SSEServer *srv = static_cast<SSEServer*>(pThis);
-  srv->ClientRouterLoop();
-  return NULL;
 }
 
 /**
@@ -233,7 +217,7 @@ void SSEServer::ClientRouterLoop() {
   LOG(INFO) << "Started client router thread.";
 
   while(1) {
-    int n = epoll_wait(efd, eventList.get(), MAXEVENTS, -1);
+    int n = epoll_wait(_efd, eventList.get(), MAXEVENTS, -1);
 
     for (int i = 0; i < n; i++) {
       SSEClient* client;
@@ -299,7 +283,7 @@ void SSEServer::ClientRouterLoop() {
         SSEChannel *ch = GetChannel(chName);
         if (ch != NULL) {
           ch->AddClient(client, req);
-          epoll_ctl(efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
+          epoll_ctl(_efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
         } else {
           HTTPResponse res;
           res.SetBody("Channel does not exist.\n");

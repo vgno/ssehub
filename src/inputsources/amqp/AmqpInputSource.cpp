@@ -1,55 +1,27 @@
 #include <unistd.h>
-#include "Common.h"
-#include "AMQPConsumer.h"
+  #include "Common.h"
+#include "SSEConfig.h"
+#include "inputsources/amqp/AmqpInputSource.h"
 
 using namespace std;
 
 extern int stop;
 
-/**
-  Wrapper function used by ptrhead to run our Consume() function.
-  @param pThis Pointer to AMQPConsumer instance object.
-*/
-void *AMQPConsumer::ThreadMain(void *pThis) {
-  AMQPConsumer *pt = static_cast<AMQPConsumer*>(pThis);
-  pt->Connect();
-  pt->Consume();
-
-  return NULL;
-}
-
-/**
-  Constructor.
-*/
-AMQPConsumer::AMQPConsumer() {
-
-}
-
-/**
-  Destructor.
-*/
-AMQPConsumer::~AMQPConsumer() {
-  DLOG(INFO) << "AMQPConsumer destructor called.";
-
-  pthread_cancel(_thread);
+AmqpInputSource::~AmqpInputSource() {
+  LOG(INFO) << "AmqpInputSource stopped.";
+  KillThread();
   Disconnect();
 }
 
-/**
-  Start consume.
-  @param host Hostname of amqp server.
-  @param port port of amqp server.
-  @param user amqp username.
-  @param password amqp password.
-  @param exchange amqp exchange.
-  @param routingkey amqp routingkey.
-  @param callback callback function.
-  @param callbackArg argument for callback function.
-*/
-void AMQPConsumer::Start(string host, int port, string user, string password, string exchange, 
-    string routingkey, void(*callback)(void*, string, string), void* callbackArg) {
+void AmqpInputSource::Start() {
+  host = _config->GetValue("amqp.host");
+  port = _config->GetValueInt("amqp.port");
+  user = _config->GetValue("amqp.user");
+  password = _config->GetValue("amqp.password");
+  exchange = _config->GetValue("amqp.exchange");
+  routingkey = _config->GetValue("amqp.routingkey");
 
-  DLOG(INFO)         << "AMQPConsumer::Start():" << 
+  DLOG(INFO)         << "AmqpInputSource::Start():" << 
     " host: "        << host <<
     " port: "        << port <<
     " user: "        << user <<
@@ -57,22 +29,14 @@ void AMQPConsumer::Start(string host, int port, string user, string password, st
     " exchange: "    << exchange <<
     " routingkey: "  << routingkey;
 
-  this->host = host;
-  this->port = port;
-  this->user = user;
-  this->password = password;
-  this->exchange = exchange;
-  this->routingkey = routingkey;
-  this->callback = callback;
-  this->callbackArg = callbackArg; 
-
-  pthread_create(&_thread, NULL, &AMQPConsumer::ThreadMain, this);
+    Connect();
+    Consume();
 }
 
 /**
  Disconnect from AMQP server.
 */
-void AMQPConsumer::Disconnect() {
+void AmqpInputSource::Disconnect() {
   amqp_connection_close(amqpConn, AMQP_REPLY_SUCCESS);
   amqp_destroy_connection(amqpConn);
   amqp_bytes_free(amqpQueueName);
@@ -82,7 +46,7 @@ void AMQPConsumer::Disconnect() {
  Reconnect AMQP server.
  @param delay Time to wait between disconnect and connect.
 */
-void AMQPConsumer::Reconnect(int delay) {
+void AmqpInputSource::Reconnect(int delay) {
    Disconnect();
    sleep(delay);
    Connect();
@@ -91,7 +55,7 @@ void AMQPConsumer::Reconnect(int delay) {
 /**
   Connect to AMQP server.
 */
-bool AMQPConsumer::Connect() {
+bool AmqpInputSource::Connect() {
   amqp_rpc_reply_t rpc_ret;
   int ret;
   
@@ -109,7 +73,6 @@ bool AMQPConsumer::Connect() {
       sleep(5);
     }
   } while(ret != AMQP_STATUS_OK);
-
 
   // Try to log in.
   do {
@@ -162,7 +125,7 @@ bool AMQPConsumer::Connect() {
 /**
   Start consumption from AMQP server.
 */
-void AMQPConsumer::Consume() {
+void AmqpInputSource::Consume() {
   while(!stop) {
     amqp_envelope_t envelope;
     amqp_rpc_reply_t ret;
@@ -188,7 +151,7 @@ void AMQPConsumer::Consume() {
      string key;
      msg.insert(0, (const char*)envelope.message.body.bytes, envelope.message.body.len);
      key.insert(0, (const char*)envelope.routing_key.bytes, envelope.routing_key.len);
-     callback(callbackArg, key, msg);
+     _callback(msg);
     }
 
     amqp_destroy_envelope(&envelope);
