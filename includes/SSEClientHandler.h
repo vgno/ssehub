@@ -5,7 +5,6 @@
 #include <pthread.h>
 #include <list>
 #include <boost/shared_ptr.hpp>
-#include <boost/weak_ptr.hpp>
 #include <boost/thread.hpp>
 #include "ConcurrentQueue.h"
 
@@ -15,19 +14,18 @@ using namespace std;
 class SSEClient;
 
 typedef boost::shared_ptr<SSEClient> SSEClientPtr;
-typedef boost::weak_ptr<SSEClient> SSEWeakClientPtr;
-typedef list<SSEWeakClientPtr> SSEWeakClientPtrList;
+typedef list<SSEClientPtr> SSEClientPtrList;
 
 class SSEClientHandler {
   public:
     SSEClientHandler(int);
     ~SSEClientHandler();
-    void AddClient(SSEClientPtr& client);
+    void AddClient(SSEClient* client);
     void Broadcast(const string msg);
 
   private:
     int _id;
-    SSEWeakClientPtrList _clientlist;
+    SSEClientPtrList _clientlist;
     boost::thread _processorthread;
     ConcurrentQueue<std::string> _msgqueue;
 

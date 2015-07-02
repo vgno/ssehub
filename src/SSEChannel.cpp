@@ -195,13 +195,11 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
     return;
   }
 
-  _clientlist.push_back(SSEClientPtr(client));
- 
   _stats.num_clients++;
   INC_LONG(_stats.num_connects);
 
   // Add client to handler thread in a round-robin fashion.
-  (*curthread)->AddClient(_clientlist.back());
+  (*curthread)->AddClient(client);
   curthread++;
 
   if (curthread == _clientpool.end()) curthread = _clientpool.begin();
@@ -275,23 +273,6 @@ void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
 }
 
 /**
-  Remove a client from the clientlist.
-  @param client Client to remove.
-*/
-void SSEChannel::RemoveClient(SSEClient* client) {
-  SSEClientPtrList::iterator it;
-
-  for (it = _clientlist.begin(); it != _clientlist.end(); it++) {
-    if ((*it).get() == client) {
-      _clientlist.erase(it);
-      return;
-    }
-  }
-
-  DLOG(ERROR) << "RemoveClient: " << "Failed.";
-}
-
-/**
  Handle client disconnects and errors.
 */
 void SSEChannel::CleanupMain() {
@@ -306,14 +287,15 @@ void SSEChannel::CleanupMain() {
 
       if ((t_events[i].events & EPOLLHUP) || (t_events[i].events & EPOLLRDHUP)) {
         DLOG(INFO) << "Channel " << _id << ": Client disconnected.";
-        RemoveClient(client);
+        client->MarkAsDead();
         INC_LONG(_stats.num_disconnects);
         _stats.num_clients--;
       } else if (t_events[i].events & EPOLLERR) {
         // If an error occours on a client socket, just drop the connection.
         DLOG(INFO) << "Channel " << _id << ": Error on client socket: " << strerror(errno);
-        RemoveClient(client);
+        client->MarkAsDead();
         INC_LONG(_stats.num_errors);
+        _stats.num_clients--;
       }
     }
   }

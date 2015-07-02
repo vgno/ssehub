@@ -12,6 +12,7 @@
 */
 SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   _fd = fd;
+  _dead = false;
   memcpy(&_csin, csin, sizeof(struct sockaddr_in));
   DLOG(INFO) << "Initialized client with IP: " << GetIP();
   
@@ -73,4 +74,12 @@ HTTPRequest* SSEClient::GetHttpReq() {
 
 void SSEClient::DeleteHttpReq() {
   m_httpReq.reset();
+}
+
+void SSEClient::MarkAsDead() {
+  _dead = true;
+}
+
+bool SSEClient::IsDead() {
+  return _dead;
 }

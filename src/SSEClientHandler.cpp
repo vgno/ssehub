@@ -37,8 +37,8 @@ SSEClientHandler::~SSEClientHandler() {
   Add client to pool.
   @param client SSEClient pointer.
 */
-void SSEClientHandler::AddClient(SSEClientPtr& client) {
-  _clientlist.push_back(SSEWeakClientPtr(client));
+void SSEClientHandler::AddClient(SSEClient* client) {
+  _clientlist.push_back(SSEClientPtr(client));
   DLOG(INFO) << "Client added to thread id: " << _id;
 }
 
@@ -55,11 +55,10 @@ void SSEClientHandler::ProcessQueue() {
     std::string msg;
     _msgqueue.WaitPop(msg);
 
-   for (SSEWeakClientPtrList::iterator it = _clientlist.begin(); it != _clientlist.end(); it++) {
-     SSEWeakClientPtr w_client = static_cast<SSEWeakClientPtr&>(*it); // Should we use a reference or not here ?.
-     SSEClientPtr client;
-
-     if (!(client = w_client.lock())) {
+   for (SSEClientPtrList::iterator it = _clientlist.begin(); it != _clientlist.end(); it++) {
+     SSEClientPtr client = static_cast<SSEClientPtr&>(*it);
+     
+     if (client->IsDead()) {
        DLOG(INFO) << "Removing disconnected client from clienthandler.";
        it = _clientlist.erase(it);
        continue;

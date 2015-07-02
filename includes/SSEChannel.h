@@ -26,8 +26,6 @@ class HTTPResponse;
 typedef boost::shared_ptr<SSEEvent> SSEEventPtr;
 typedef boost::shared_ptr<SSEClientHandler> ClientHandlerPtr;
 typedef vector<ClientHandlerPtr> ClientHandlerList;
-typedef boost::shared_ptr<SSEClient> SSEClientPtr;
-typedef list<SSEClientPtr> SSEClientPtrList;
 
 struct SSEChannelStats {
   long num_clients;
@@ -54,7 +52,6 @@ class SSEChannel {
   private:
     string _id;
     int _efd;
-    SSEClientPtrList _clientlist;
     ClientHandlerList::iterator curthread;
     ChannelConfig _config;
     SSEChannelStats _stats;
@@ -70,7 +67,6 @@ class SSEChannel {
 
     void CleanupMain();
     void CleanupThreads();
-    void RemoveClient(SSEClient* client);
     void Ping();
     void SetCorsHeaders(HTTPRequest* req, HTTPResponse& res);
 };
