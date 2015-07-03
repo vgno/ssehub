@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
+#include "Common.h"
 #include "SSEConfig.h"
 
 using namespace std;
@@ -28,13 +29,13 @@ typedef boost::shared_ptr<SSEClientHandler> ClientHandlerPtr;
 typedef vector<ClientHandlerPtr> ClientHandlerList;
 
 struct SSEChannelStats {
-  unsigned long num_clients;
-  unsigned int  num_cached_events;
-  unsigned long num_broadcasted_events;
-  unsigned long num_errors;
-  unsigned long num_connects;
-  unsigned long num_disconnects;
-  unsigned int  cache_size;
+  ulong num_clients;
+  uint  num_cached_events;
+  ulong num_broadcasted_events;
+  ulong num_errors;
+  ulong num_connects;
+  ulong num_disconnects;
+  uint  cache_size;
 };
 
 class SSEChannel {

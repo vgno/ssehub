@@ -42,12 +42,12 @@ void SSEStatsHandler::Init(SSEConfig* config, SSEServer* server) {
 }
 
 void SSEStatsHandler::Update() {
-  long totalClients     = 0;
-  long totalEvents      = 0;
-  long totalConnects    = 0;
-  long totalDisconnects = 0;
-  long totalErrors      = 0;
-  int  numChannels      = 0;
+  ulong totalClients     = 0;
+  ulong totalEvents      = 0;
+  ulong totalConnects    = 0;
+  ulong totalDisconnects = 0;
+  ulong totalErrors      = 0;
+  uint  numChannels      = 0;
 
   boost::property_tree::ptree pt; 
   boost::property_tree::ptree channels; 
@@ -55,7 +55,7 @@ void SSEStatsHandler::Update() {
   BOOST_FOREACH(const SSEChannelPtr& chan, _server->GetChannelList()) {
     boost::property_tree::ptree pt_element; 
 
-    const SSEChannelStats& stat = chan->GetStats();;
+    const SSEChannelStats& stat = chan->GetStats();
 
     totalClients     += stat.num_clients;
     totalEvents      += stat.num_broadcasted_events;

@@ -2,6 +2,7 @@
 #define SSESTATSHANDLER_H
 
 #include <string>
+#include "Common.h"
 
 extern int stop;
 
@@ -12,10 +13,10 @@ class SSEClient;
 
 class SSEStatsHandler {
   public:
-    long invalid_events_rcv;
-    long router_read_errors;
-    long invalid_http_req;
-    long oversized_http_req;
+    ulong invalid_events_rcv;
+    ulong router_read_errors;
+    ulong invalid_http_req;
+    ulong oversized_http_req;
 
     SSEStatsHandler();
     ~SSEStatsHandler();
