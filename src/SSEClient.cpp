@@ -48,7 +48,7 @@ size_t SSEClient::Read(void* buf, int len) {
 */
 SSEClient::~SSEClient() {
   DLOG(INFO) << "Destructor called for client with IP: " << GetIP();
-  close(_fd);
+  if (!_dead) close(_fd);
 }
 
 /**
@@ -78,6 +78,7 @@ void SSEClient::DeleteHttpReq() {
 
 void SSEClient::MarkAsDead() {
   _dead = true;
+  close(_fd);
 }
 
 bool SSEClient::IsDead() {
