@@ -1,5 +1,5 @@
 # vim: set noet
-LIBS=-lpthread -lboost_system -lboost_thread -lglog -lrabbitmq
+LIBS=-lpthread -lboost_system -lboost_thread -lboost_program_options -lglog -lrabbitmq
 INC=-I/usr/include/boost -I/usr/include/boost148 -I./includes
 CC=g++
 ODIR=.
