@@ -3,9 +3,9 @@ SSEHUB (Server-Sent Events streaming server)
 
 Performant SSE-server implementation written in C++ that supports multiple channels and high traffic loads.
 # Key features
-  - Supports multiple channels both staticly and dynamicly-on-the-fly configured.
+  - Supports multiple channels both staticly and dynamically-on-the-fly configured.
   - Configureable history cache that can be requested by clients upon reconnect using lastEventId.
-  - Configureble "keep-alive" pings.
+  - Configureable "keep-alive" pings.
   - CORS support.
   - RabbitMQ as input source.
   - Polyfill client support.
