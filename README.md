@@ -11,7 +11,7 @@ Performant SSE-server implementation written in C++ that supports multiple chann
   - Polyfill client support.
   - Statistics endpoint (/stats).
 
-# Building and running.
+# Building and running
 Install dependencies (using apt in this example):
 ```
 apt-get install g++ make libgoogle-glog-dev libboost-dev libboost-system-dev libboost-thread-dev librabbitmq-dev
@@ -34,7 +34,7 @@ Run:
 
 There is also a Dockerfile you can use to build a docker image.
 
-# Example configuration.
+# Example configuration
 ```json
 {
   "server": {
