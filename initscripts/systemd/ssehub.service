@@ -1,0 +1,20 @@
+[Unit]
+Description=Server sent events hub
+Wants=network.target
+After=network.target
+
+[Service]
+Type=simple
+LimitFSIZE=infinity
+LimitCPU=infinity
+LimitAS=infinity
+LimitNOFILE=325888
+LimitNPROC=325888
+LimitCORE=infinity
+WorkingDirectory=/usr/bin/ssehub -config /etc/ssehub/config
+User=ssehub
+group=ssehub
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
