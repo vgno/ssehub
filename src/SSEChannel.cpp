@@ -296,7 +296,6 @@ void SSEChannel::CleanupMain() {
         DLOG(INFO) << "Channel " << _id << ": Error on client socket: " << strerror(errno);
         client->MarkAsDead();
         INC_LONG(_stats.num_errors);
-        _stats.num_disconnects--;
       }
     }
   }
