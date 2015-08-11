@@ -68,3 +68,10 @@ void SSEClientHandler::ProcessQueue() {
    }
   }
 }
+
+/**
+  Returns number of clients connected to this clienthandler thread.
+*/
+size_t SSEClientHandler::GetNumClients() {
+  return _clientlist.size();
+}

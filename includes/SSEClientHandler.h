@@ -22,6 +22,7 @@ class SSEClientHandler {
     ~SSEClientHandler();
     void AddClient(SSEClient* client);
     void Broadcast(const string msg);
+    size_t GetNumClients();
 
   private:
     int _id;
