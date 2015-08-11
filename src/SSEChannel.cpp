@@ -195,8 +195,11 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
     SendEventsSince(client, lastEventId);
   }
 
+  // Disable reading from the socket
+  // since we are just going to broadcast messages to the client from now on.
+  shutdown(client->Getfd(), SHUT_RD);
 
-  ev.events   = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLET;
+  ev.events   = EPOLLHUP | EPOLLERR | EPOLLET;
   ev.data.ptr = client;
   ret = epoll_ctl(_efd, EPOLL_CTL_ADD, client->Getfd(), &ev);
 
@@ -206,7 +209,6 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
     return;
   }
 
-  _stats.num_clients++;
   INC_LONG(_stats.num_connects);
 
   // Add client to handler thread in a round-robin fashion.
@@ -282,17 +284,15 @@ void SSEChannel::CleanupMain() {
       SSEClient* client;
       client = static_cast<SSEClient*>(t_events[i].data.ptr);
 
-      if ((t_events[i].events & EPOLLHUP) || (t_events[i].events & EPOLLRDHUP)) {
+      if (t_events[i].events & EPOLLHUP) {
         DLOG(INFO) << "Channel " << _id << ": Client disconnected.";
         client->MarkAsDead();
         INC_LONG(_stats.num_disconnects);
-        _stats.num_clients--;
       } else if (t_events[i].events & EPOLLERR) {
         // If an error occours on a client socket, just drop the connection.
         DLOG(INFO) << "Channel " << _id << ": Error on client socket: " << strerror(errno);
         client->MarkAsDead();
         INC_LONG(_stats.num_errors);
-        _stats.num_clients--;
       }
     }
   }
@@ -309,9 +309,24 @@ void SSEChannel::Ping() {
 }
 
 /**
+  Returns number of clients connected to this channel.
+*/
+ulong SSEChannel::GetNumClients() {
+  ClientHandlerList::iterator it;
+  ulong numclients = 0;
+
+  for (it = _clientpool.begin(); it != _clientpool.end(); it++) {
+    numclients += (*it)->GetNumClients();
+  }
+
+  return numclients;
+}
+
+/**
  Fetch various statistics for the channel.
  @param stats Pointer to SSEChannelStats struct which is to be filled with the statistics.
 **/
 const SSEChannelStats& SSEChannel::GetStats() {
+  _stats.num_clients = GetNumClients();
   return _stats;
 }
