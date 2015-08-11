@@ -40,7 +40,6 @@ class SSEConfig {
     ConfigMap_t ConfigMap;
     ChannelMap_t ChannelMap;
     ChannelConfig DefaultChannelConfig;
-    CacheConfig DefaultCacheConfig;
     vector<std::string> DefaultAllowedOrigins;
 };
 
