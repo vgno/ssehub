@@ -55,6 +55,8 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   _evs_preamble_data[2050] = '\n';
   _evs_preamble_data[2051] = '\0';
 
+  InitializeCache();
+
   InitializeThreads();
 }
 
@@ -64,6 +66,15 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
 SSEChannel::~SSEChannel() {
   DLOG(INFO) << "SSEChannel destructor called.";
   CleanupThreads();
+}
+
+void SSEChannel::InitializeCache() {
+  const string adapter = _config.server->GetValue("cache.adapter");
+  if (adapter == "redis") {
+
+  } else if (adapter == "memory") {
+    _cache_adapter = new Memory(_config.historyLength);
+  }
 }
 
 /**
@@ -238,22 +249,10 @@ void SSEChannel::BroadcastEvent(SSEEvent* event) {
   @param event Event to cache.
 */
 void SSEChannel::CacheEvent(SSEEvent* event) {
-  // If we have the event id in our vector already don't remove it.
-  // We want to keep the order even if we get an update on the event.
-  if (std::find(_cache_keys.begin(), _cache_keys.end(), event->getid()) == _cache_keys.end()) {
-    _cache_keys.push_back(event->getid());
-  }
-
-  _cache_data[event->getid()] = SSEEventPtr(event);
-
-  // Delete the oldest cache object if we hit the historyLength limit.
-  if ((int)_cache_keys.size() > _config.historyLength) {
-    string& firstElementId = *(_cache_keys.begin());
-    _cache_data.erase(firstElementId);
-    _cache_keys.erase(_cache_keys.begin());
-  }
-
-  _stats.num_cached_events = _cache_keys.size();
+    if (_cache_adapter) {
+      _cache_adapter->CacheEvent(event);
+      _stats.num_cached_events = _cache_adapter->GetSizeOfCachedEvents();
+    }
 }
 
 /**
@@ -262,13 +261,11 @@ void SSEChannel::CacheEvent(SSEEvent* event) {
 */
 void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
   deque<string>::const_iterator it;
+  deque<string> events = _cache_adapter->GetEventsSinceId(lastId);
 
-  it = std::find(_cache_keys.begin(), _cache_keys.end(), lastId);
-  if (it == _cache_keys.end()) return;
-
-  while (it != _cache_keys.end()) {
-    client->Send(_cache_data[*(it)]->get());
-    it++;
+  while (!events.empty()) {
+    client->Send(events.front());
+    events.pop_front();
   }
 }
 

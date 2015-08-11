@@ -14,6 +14,7 @@
 #include <boost/thread.hpp>
 #include "Common.h"
 #include "SSEConfig.h"
+#include "CacheAdapters/Memory.h"
 
 using namespace std;
 
@@ -58,11 +59,12 @@ class SSEChannel {
     SSEChannelStats _stats;
     boost::thread _cleanupthread;
     boost::thread _pingthread;
-    deque<string> _cache_keys;
-    map<string, SSEEventPtr> _cache_data;
     ClientHandlerList _clientpool;
+    CacheInterface* _cache_adapter;
     bool _allow_all_origins;
     char _evs_preamble_data[2052];
+
+    void InitializeCache();
 
     void InitializeThreads();
 

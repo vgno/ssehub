@@ -6,6 +6,13 @@
 
 using namespace std;
 
+
+struct CacheConfig {
+    string adapter;
+    int length;
+    int expires;
+};
+
 struct ChannelConfig {
   class SSEConfig*    server;
   std::vector<string> allowedOrigins;
@@ -33,6 +40,7 @@ class SSEConfig {
     ConfigMap_t ConfigMap;
     ChannelMap_t ChannelMap;
     ChannelConfig DefaultChannelConfig;
+    CacheConfig DefaultCacheConfig;
     vector<std::string> DefaultAllowedOrigins;
 };
 

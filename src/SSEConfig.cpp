@@ -39,6 +39,10 @@ void SSEConfig::InitDefaults() {
 
  ConfigMap["default.historyLength"]           = "50";
  ConfigMap["default.historyUrl"]              = "";
+
+ ConfigMap["cache.adapter"]                   = "memory";
+ ConfigMap["cache.length"]                    = "50";
+ ConfigMap["cache.expires"]                   = "0";
 }
 
 /**
