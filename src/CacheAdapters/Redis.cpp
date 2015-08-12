@@ -10,10 +10,9 @@
 
 using namespace std;
 
-Redis::Redis(string key, int length, int expires) {
+Redis::Redis(string key, int length) {
     _key = key;
     _config.length = length;
-    _config.expires = expires;
 
     Connect();
 }

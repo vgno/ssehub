@@ -71,7 +71,7 @@ SSEChannel::~SSEChannel() {
 void SSEChannel::InitializeCache() {
   const string adapter = _config.server->GetValue("cache.adapter");
   if (adapter == "redis") {
-    _cache_adapter = new Redis(_id, 50, 0);
+    _cache_adapter = new Redis(_id, _config.historyLength);
   } else if (adapter == "memory") {
     _cache_adapter = new Memory(_config.historyLength);
   }

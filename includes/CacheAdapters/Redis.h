@@ -6,7 +6,7 @@
 
 class Redis : public CacheInterface {
   public:
-    Redis(string key, int length, int expires);
+    Redis(string key, int length);
     void CacheEvent(SSEEvent* event);
     deque<string> GetEventsSinceId(string lastId);
     deque<string> GetAllEvents();
@@ -17,6 +17,7 @@ class Redis : public CacheInterface {
     void Connect();
     void Disconnect();
     void Reconnect(int delay);
+    void Expire(int ttl);
     RedisSyncClient* _client;
     string _key;
 };
