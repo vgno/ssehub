@@ -52,15 +52,20 @@ There is also a Dockerfile you can use to build a docker image.
     "password": "guest",
     "exchange": "amq.fanout"
   },
+  "redis: {
+    "host": "127.0.0.1",
+    "port": "6379"
+  },
   "default": {
-    "historyLength": 500,
+    "cacheAdapter": "redis",
+    "cacheLength": 100,
     "allowedOrigins":  "*"
   },
   "channels": [
     {
         "path": "test",
         "allowedOrigins": ["https://some.host"],
-        "historyLength": 50
+        "cacheLength": 50
     },
     {
         "path": "test2"
