@@ -37,6 +37,9 @@ void SSEConfig::InitDefaults() {
  ConfigMap["amqp.password"]                   = "guest";
  ConfigMap["amqp.exchange"]                   = "amq.fanout";
 
+ConfigMap["redis.host"]                       = "127.0.0.1";
+ConfigMap["redis.port"]                       = "6379";
+
  ConfigMap["default.cacheAdapter"]            = "redis";
  ConfigMap["default.cacheLength"]             = "500";
 }

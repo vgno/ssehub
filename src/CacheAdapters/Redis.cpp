@@ -12,13 +12,14 @@ using namespace std;
 
 Redis::Redis(string key, ChannelConfig config) {
     _key = key;
+    _config = config;
 
     Connect();
 }
 
 void Redis::Connect() {
-  boost::asio::ip::address address = boost::asio::ip::address::from_string("127.0.0.1");
-  const unsigned short port = 6379;
+  boost::asio::ip::address address = boost::asio::ip::address::from_string(_config.server->GetValue("redis.host"));
+  const unsigned short port = _config.server->GetValueInt("redis.port");
 
   boost::asio::io_service ioService;
   _client = new RedisSyncClient(ioService);
@@ -30,7 +31,7 @@ void Redis::Connect() {
     return;
   }
 
-  LOG(INFO) << "Connected to redis";
+  LOG(INFO) << "Connected to redis server " << _config.server->GetValue("redis.host") << ":" << _config.server->GetValue("redis.port");
 }
 
 void Redis::Disconnect() {
