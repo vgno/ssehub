@@ -1,4 +1,4 @@
-#ifndef CACHEINTERACE_H
+#ifndef CACHEINTERFACE_H
 #define CACHEINTERFACE_H
 
 #include <deque>
