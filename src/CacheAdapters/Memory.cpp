@@ -9,7 +9,7 @@ Memory::Memory(int length) {
     _config.length = length;
 }
 
-void CacheInterface::CacheEvent(SSEEvent* event) {
+void Memory::CacheEvent(SSEEvent* event) {
   // If we have the event id in our vector already don't remove it.
   // We want to keep the order even if we get an update on the event.
   if (std::find(_cache_keys.begin(), _cache_keys.end(), event->getid()) == _cache_keys.end()) {
@@ -26,7 +26,7 @@ void CacheInterface::CacheEvent(SSEEvent* event) {
   }
 }
 
-deque<string> CacheInterface::GetEventsSinceId(string lastId) {
+deque<string> Memory::GetEventsSinceId(string lastId) {
   deque<string>::const_iterator it;
   deque<string> events;
 
@@ -40,7 +40,7 @@ deque<string> CacheInterface::GetEventsSinceId(string lastId) {
   return events;
 }
 
-deque<string> CacheInterface::GetAllEvents() {
+deque<string> Memory::GetAllEvents() {
   deque<string>::const_iterator it;
   deque<string> events;
 
@@ -54,6 +54,6 @@ deque<string> CacheInterface::GetAllEvents() {
   return events;
 }
 
-int CacheInterface::GetSizeOfCachedEvents() {
+int Memory::GetSizeOfCachedEvents() {
     return (int) _cache_keys.size();
 }
