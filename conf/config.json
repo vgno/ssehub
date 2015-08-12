@@ -18,6 +18,9 @@
     "historyLength": 500,
     "allowedOrigins":  "*"
   },
+  "cache": {
+    "adapter": "redis"
+  },
   "channels": [
     {
         "path": "test",
