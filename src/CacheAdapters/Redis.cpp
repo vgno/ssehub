@@ -9,6 +9,7 @@
 #include <boost/asio/ip/address.hpp>
 
 using namespace std;
+extern int stop;
 
 Redis::Redis(string key, ChannelConfig config) {
     _key = key;
@@ -39,9 +40,11 @@ void Redis::Disconnect() {
 }
 
 void Redis::Reconnect(int delay) {
-  Disconnect();
-  sleep(delay);
-  Connect();
+  if (!stop) {
+    Disconnect();
+    sleep(delay);
+    Connect();
+  }
 }
 
 void Redis::CacheEvent(SSEEvent* event) {
