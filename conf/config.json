@@ -15,21 +15,19 @@
     "exchange": "amq.fanout"
   },
   "default": {
-    "historyLength": 500,
+    "cacheAdapter": "redis",
+    "cacheLength": 500,
     "allowedOrigins":  "*"
-  },
-  "cache": {
-    "adapter": "redis"
   },
   "channels": [
     {
         "path": "test",
         "allowedOrigins": ["https://some.host"],
-        "historyUrl": "https://some.url/which/talks/json",
-        "historyLength": 50
+        "cacheLength": 50
     },
     {
-        "path": "test2"
+        "path": "test2",
+        "cacheAdapter": "memory"
     }
   ]
 }

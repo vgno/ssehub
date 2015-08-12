@@ -19,6 +19,6 @@ class CacheInterface {
     virtual deque<string> GetEventsSinceId(string lastId)=0;
     virtual deque<string> GetAllEvents()=0;
     virtual int GetSizeOfCachedEvents()=0;
-    CacheConfig _config;
+    ChannelConfig _config;
 };
 #endif

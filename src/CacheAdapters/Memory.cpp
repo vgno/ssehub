@@ -5,8 +5,8 @@
 
 using namespace std;
 
-Memory::Memory(int length) {
-    _config.length = length;
+Memory::Memory(ChannelConfig config) {
+    _config = config;
 }
 
 void Memory::CacheEvent(SSEEvent* event) {
@@ -19,7 +19,7 @@ void Memory::CacheEvent(SSEEvent* event) {
   _cache_data[event->getid()] = SSEEventPtr(event);
 
   // Delete the oldest cache object if we hit the historyLength limit.
-  if ((int)_cache_keys.size() > _config.length) {
+  if ((int)_cache_keys.size() > _config.cacheLength) {
     string &firstElementId = *(_cache_keys.begin());
     _cache_data.erase(firstElementId);
     _cache_keys.erase(_cache_keys.begin());

@@ -6,18 +6,11 @@
 
 using namespace std;
 
-
-struct CacheConfig {
-    string adapter;
-    int length;
-    int expire;
-};
-
 struct ChannelConfig {
   class SSEConfig*    server;
   std::vector<string> allowedOrigins;
-  std::string         historyUrl;
-  int                 historyLength;
+  string              cacheAdapter;
+  int                 cacheLength;
 };
 
 typedef std::map<const std::string, std::string> ConfigMap_t;

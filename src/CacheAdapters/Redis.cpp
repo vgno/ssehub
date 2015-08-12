@@ -10,9 +10,8 @@
 
 using namespace std;
 
-Redis::Redis(string key, int length) {
+Redis::Redis(string key, ChannelConfig config) {
     _key = key;
-    _config.length = length;
 
     Connect();
 }
@@ -55,7 +54,7 @@ void Redis::CacheEvent(SSEEvent* event) {
     LOG(ERROR) << "HLEN error" << result.toString();
   }
   if (result.isOk()) {
-    if (result.toInt() > _config.length) {
+    if (result.toInt() > _config.cacheLength) {
       result = _client->command("HKEYS", _key);
       if (result.isError()) {
         LOG(ERROR) << "HKEYS error: " << result.toString();

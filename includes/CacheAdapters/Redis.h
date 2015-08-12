@@ -6,12 +6,12 @@
 
 class Redis : public CacheInterface {
   public:
-    Redis(string key, int length);
+    Redis(string key, ChannelConfig config);
     void CacheEvent(SSEEvent* event);
     deque<string> GetEventsSinceId(string lastId);
     deque<string> GetAllEvents();
     int GetSizeOfCachedEvents();
-    CacheConfig _config;
+    ChannelConfig _config;
 
   private:
     void Connect();
