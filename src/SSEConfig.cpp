@@ -42,7 +42,6 @@ void SSEConfig::InitDefaults() {
 
  ConfigMap["cache.adapter"]                   = "memory";
  ConfigMap["cache.length"]                    = "50";
- ConfigMap["cache.expires"]                   = "0";
 }
 
 /**
