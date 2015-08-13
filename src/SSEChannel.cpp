@@ -195,11 +195,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
     SendEventsSince(client, lastEventId);
   }
 
-  // Disable reading from the socket
-  // since we are just going to broadcast messages to the client from now on.
-  shutdown(client->Getfd(), SHUT_RD);
-
-  ev.events   = EPOLLHUP | EPOLLERR | EPOLLET;
+  ev.events   = EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR | EPOLLET;
   ev.data.ptr = client;
   ret = epoll_ctl(_efd, EPOLL_CTL_ADD, client->Getfd(), &ev);
 
@@ -284,7 +280,14 @@ void SSEChannel::CleanupMain() {
       SSEClient* client;
       client = static_cast<SSEClient*>(t_events[i].data.ptr);
 
-      if (t_events[i].events & EPOLLHUP) {
+      if (t_events[i].events & EPOLLIN) {
+        char buf[512];
+        int rcv_len = client->Read(buf, 512);
+        if (rcv_len <= 0) {
+          client->MarkAsDead();
+          INC_LONG(_stats.num_disconnects);
+        }
+      } else if ((t_events[i].events & EPOLLHUP)  || (t_events[i].events & EPOLLRDHUP)) {
         DLOG(INFO) << "Channel " << _id << ": Client disconnected.";
         client->MarkAsDead();
         INC_LONG(_stats.num_disconnects);
