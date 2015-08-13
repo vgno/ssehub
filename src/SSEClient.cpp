@@ -1,6 +1,7 @@
 #include "Common.h"
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netinet/tcp.h>
 #include <boost/shared_ptr.hpp>
 #include "SSEClient.h"
 #include "HTTPRequest.h"
@@ -17,6 +18,10 @@ SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   DLOG(INFO) << "Initialized client with IP: " << GetIP();
   
   m_httpReq = boost::shared_ptr<HTTPRequest>(new HTTPRequest());
+
+  // Set TCP_NODELAY on socket.
+  int flag = 1;
+  setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
 }
 
 /**
@@ -31,7 +36,8 @@ void SSEClient::Destroy() {
  @param data String buffer to send.
 */
 int SSEClient::Send(const string &data) {
-  return send(_fd, data.c_str(), data.length(), MSG_NOSIGNAL);
+   boost::mutex::scoped_lock lock(_writelock);
+   return send(_fd, data.c_str(), data.length(), MSG_NOSIGNAL);
 }
 
 /**
