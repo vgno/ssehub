@@ -10,6 +10,6 @@ WORKDIR /ssehub
 RUN make clean
 RUN make
 
-EXPOSE 8090
+EXPOSE 8080
 
 CMD ["./ssehub"]
