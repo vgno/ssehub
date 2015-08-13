@@ -36,8 +36,8 @@ void SSEClient::Destroy() {
  @param data String buffer to send.
 */
 int SSEClient::Send(const string &data) {
-   boost::mutex::scoped_lock lock(_writelock);
-   return send(_fd, data.c_str(), data.length(), MSG_NOSIGNAL);
+  boost::mutex::scoped_lock lock(_writelock);
+  return send(_fd, data.c_str(), data.length(), MSG_NOSIGNAL);
 }
 
 /**
