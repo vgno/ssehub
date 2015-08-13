@@ -52,7 +52,7 @@ There is also a Dockerfile you can use to build a docker image.
     "password": "guest",
     "exchange": "amq.fanout"
   },
-  "redis: {
+  "redis": {
     "host": "127.0.0.1",
     "port": "6379"
   },
