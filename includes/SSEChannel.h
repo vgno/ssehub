@@ -15,6 +15,7 @@
 #include "Common.h"
 #include "SSEConfig.h"
 #include "CacheAdapters/Memory.h"
+#include "CacheAdapters/Redis.h"
 
 using namespace std;
 

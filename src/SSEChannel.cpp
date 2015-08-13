@@ -32,12 +32,12 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   _stats.num_errors            = 0;
   _stats.num_cached_events     = 0;
   _stats.num_broadcasted_events = 0;
-  _stats.cache_size            = _config.historyLength;
+  _stats.cache_size            = _config.cacheLength;
 
 
   LOG(INFO) << "Initializing channel " << _id;
-  LOG(INFO) << "History length: " << _config.historyLength;
-  LOG(INFO) << "History URL: " << _config.historyUrl;
+  LOG(INFO) << "Cache Adapter: " << _config.cacheAdapter;
+  LOG(INFO) << "Cache length: " << _config.cacheLength;
   LOG(INFO) << "Threads per channel: " << _config.server->GetValue("server.threadsPerChannel");
 
   _allow_all_origins = (_config.allowedOrigins.size() < 1) ? true : false;
@@ -69,11 +69,11 @@ SSEChannel::~SSEChannel() {
 }
 
 void SSEChannel::InitializeCache() {
-  const string adapter = _config.server->GetValue("cache.adapter");
+  const string adapter = _config.cacheAdapter;
   if (adapter == "redis") {
-
+    _cache_adapter = new Redis(_id, _config);
   } else if (adapter == "memory") {
-    _cache_adapter = new Memory(_config.historyLength);
+    _cache_adapter = new Memory(_config);
   }
 }
 

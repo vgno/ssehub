@@ -37,12 +37,11 @@ void SSEConfig::InitDefaults() {
  ConfigMap["amqp.password"]                   = "guest";
  ConfigMap["amqp.exchange"]                   = "amq.fanout";
 
- ConfigMap["default.historyLength"]           = "50";
- ConfigMap["default.historyUrl"]              = "";
+ConfigMap["redis.host"]                       = "127.0.0.1";
+ConfigMap["redis.port"]                       = "6379";
 
- ConfigMap["cache.adapter"]                   = "memory";
- ConfigMap["cache.length"]                    = "50";
- ConfigMap["cache.expires"]                   = "0";
+ ConfigMap["default.cacheAdapter"]            = "redis";
+ ConfigMap["default.cacheLength"]             = "500";
 }
 
 /**
@@ -81,8 +80,8 @@ bool SSEConfig::load(const char *file) {
 void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
   // Set up DefaultChannelConfig.
   DefaultChannelConfig.server = this;
-  DefaultChannelConfig.historyLength = GetValueInt("default.historyLength");
-  DefaultChannelConfig.historyUrl = GetValueInt("default.historyUrl");
+  DefaultChannelConfig.cacheAdapter = GetValue("default.cacheAdapter");
+  DefaultChannelConfig.cacheLength = GetValueInt("default.cacheLength");
 
   // Get default allowedOrigins.
   try {
@@ -114,8 +113,8 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
     }
 
     // Optional channel parameters.
-    ChannelMap[chName].historyUrl = child.second.get<std::string>("historyUrl", DefaultChannelConfig.historyUrl);
-    ChannelMap[chName].historyLength = child.second.get<int>("historyLength", DefaultChannelConfig.historyLength);
+    ChannelMap[chName].cacheAdapter = child.second.get<std::string>("cacheAdapter", DefaultChannelConfig.cacheAdapter);
+    ChannelMap[chName].cacheLength = child.second.get<int>("cacheLength", DefaultChannelConfig.cacheLength);
    }
   } catch(...) {
     if (!GetValueBool("server.allowUndefinedChannels")) {

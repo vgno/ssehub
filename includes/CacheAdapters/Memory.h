@@ -5,6 +5,15 @@
 
 class Memory : public CacheInterface {
   public:
-    Memory(int length);
+    Memory(ChannelConfig config);
+    void CacheEvent(SSEEvent* event);
+    deque<string> GetEventsSinceId(string lastId);
+    deque<string> GetAllEvents();
+    int GetSizeOfCachedEvents();
+    ChannelConfig _config;
+
+  private:
+    deque<string> _cache_keys;
+    map<string, SSEEventPtr> _cache_data;
 };
 #endif

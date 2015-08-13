@@ -1,4 +1,4 @@
-#ifndef CACHEINTERACE_H
+#ifndef CACHEINTERFACE_H
 #define CACHEINTERFACE_H
 
 #include <deque>
@@ -15,12 +15,10 @@ typedef boost::shared_ptr<SSEEvent> SSEEventPtr;
 
 class CacheInterface {
   public:
-    void CacheEvent(SSEEvent* event);
-    deque<string> GetEventsSinceId(string lastId);
-    deque<string> GetAllEvents();
-    int GetSizeOfCachedEvents();
-    CacheConfig _config;
-    deque<string> _cache_keys;
-    map<string, SSEEventPtr> _cache_data;
+    virtual void CacheEvent(SSEEvent* event)=0;
+    virtual deque<string> GetEventsSinceId(string lastId)=0;
+    virtual deque<string> GetAllEvents()=0;
+    virtual int GetSizeOfCachedEvents()=0;
+    ChannelConfig _config;
 };
 #endif
