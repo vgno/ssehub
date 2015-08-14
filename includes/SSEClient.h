@@ -2,10 +2,11 @@
 #define SSECLIENT_H
 
 #include <string>
-#include <vector>
+#include <deque>
 #include <sys/epoll.h>
 #include <netinet/in.h>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
 #include "HTTPRequest.h"
 
 using namespace std;
@@ -28,6 +29,7 @@ class SSEClient {
     int _fd;
     struct sockaddr_in _csin;
     bool _dead;
+    boost::mutex _writelock;
     boost::shared_ptr<HTTPRequest> m_httpReq;
 };
 

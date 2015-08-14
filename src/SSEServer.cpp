@@ -9,7 +9,7 @@
 #include "SSEEvent.h"
 #include "SSEConfig.h"
 #include "SSEChannel.h"
-#include "inputsources/amqp/AmqpInputSource.h"
+#include "InputSources/amqp/AmqpInputSource.h"
 
 using namespace std;
 
