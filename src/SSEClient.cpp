@@ -16,7 +16,7 @@ SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   _dead = false;
   memcpy(&_csin, csin, sizeof(struct sockaddr_in));
   DLOG(INFO) << "Initialized client with IP: " << GetIP();
-  
+
   m_httpReq = boost::shared_ptr<HTTPRequest>(new HTTPRequest());
 
   // Set TCP_NODELAY on socket.
@@ -75,7 +75,7 @@ const string SSEClient::GetIP() {
 }
 
 HTTPRequest* SSEClient::GetHttpReq() {
-  return m_httpReq.get(); 
+  return m_httpReq.get();
 }
 
 void SSEClient::DeleteHttpReq() {

@@ -18,7 +18,7 @@ class SSEEvent {
     const string get();
     const string getpath();
     const string getid();
-  
+
   private:
     stringstream json_ss;
     string event;

@@ -43,10 +43,10 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   _allow_all_origins = (_config.allowedOrigins.size() < 1) ? true : false;
 
   BOOST_FOREACH(const std::string& origin, _config.allowedOrigins) {
-    DLOG(INFO) << "Allowed origin: " << origin;     
+    DLOG(INFO) << "Allowed origin: " << origin;
   }
 
-  // Internet Explorer has a problem receiving data when using XDomainRequest before it has received 2KB of data. 
+  // Internet Explorer has a problem receiving data when using XDomainRequest before it has received 2KB of data.
   // The polyfills that account for this send a query parameter, evs_preamble to inform the server about this so it can respond with some initial data.
   // Initialize a buffer containing our response for this case.
   _evs_preamble_data[0] = ':';

@@ -46,7 +46,7 @@ ConfigMap["redis.port"]                       = "6379";
 
 /**
   Load a config file.
-  @param file Filename of config to load. 
+  @param file Filename of config to load.
 */
 bool SSEConfig::load(const char *file) {
   boost::property_tree::ptree pt;
@@ -131,7 +131,7 @@ void SSEConfig::GetArray(vector<std::string>& target, boost::property_tree::ptre
 
 /**
   Fetch a config attribute and return as a string.
-  @param key Config attribute to fetch. 
+  @param key Config attribute to fetch.
 */
 const string &SSEConfig::GetValue(const string& key) {
   return ConfigMap[key];
@@ -139,7 +139,7 @@ const string &SSEConfig::GetValue(const string& key) {
 
 /**
   Fetch a config attribute and return as a int.
-  @param key Config attribute to fetch. 
+  @param key Config attribute to fetch.
 */
 int SSEConfig::GetValueInt(const string& key) {
   try  {

@@ -55,7 +55,7 @@ void SSEServer::BroadcastCallback(string msg) {
   else                           { return; }
 
   SSEChannel *ch = GetChannel(chName);
-  
+
   if (ch == NULL) {
     if (!_config->GetValueBool("server.allowUndefinedChannels")) {
         LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
@@ -213,7 +213,7 @@ void SSEServer::AcceptLoop() {
 void SSEServer::ClientRouterLoop() {
   char buf[4096];
   boost::shared_ptr<struct epoll_event[]> eventList(new struct epoll_event[MAXEVENTS]);
-  
+
   LOG(INFO) << "Started client router thread.";
 
   while(1) {
@@ -239,15 +239,15 @@ void SSEServer::ClientRouterLoop() {
 
       // Read from client.
       size_t len = client->Read(&buf, 4096);
-      
+
       if (len <= 0) {
         stats.router_read_errors++;
         client->Destroy();
-        continue; 
+        continue;
       }
 
       buf[len] = '\0';
-      
+
       // Parse the request.
       HTTPRequest* req = client->GetHttpReq();
       HttpReqStatus reqRet = req->Parse(buf, len);
@@ -278,7 +278,7 @@ void SSEServer::ClientRouterLoop() {
 
         string chName = req->GetPath().substr(1);
         DLOG(INFO) << "CHANNEL:" << chName << ".";
-        
+
         // substr(1) to remove the /.
         SSEChannel *ch = GetChannel(chName);
         if (ch != NULL) {

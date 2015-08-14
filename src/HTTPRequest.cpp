@@ -29,10 +29,10 @@ HTTPRequest::~HTTPRequest() {}
 **/
 HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
   int pret;
- 
-  if (httpReq_isComplete) return HTTP_REQ_OK;  
+
+  if (httpReq_isComplete) return HTTP_REQ_OK;
   httpReq_bytesReadPrev = httpReq_bytesRead;
- 
+
   // Request is to large.
   if ((httpReq_bytesRead + len) > HTTPREQ_BUFSIZ) {
     DLOG(ERROR) << "HTTP_REQ_FAILED " << "Request to large.";
@@ -44,7 +44,7 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
 
   phr_num_headers = sizeof(phr_headers) / sizeof(phr_headers[0]);
 
-  pret = phr_parse_request(httpReq_buf.c_str(), httpReq_bytesRead, &phr_method, &phr_method_len, &phr_path, 
+  pret = phr_parse_request(httpReq_buf.c_str(), httpReq_bytesRead, &phr_method, &phr_method_len, &phr_path,
       &phr_path_len, &phr_minor_version, phr_headers, &phr_num_headers, httpReq_bytesReadPrev);
 
   // Parse error.
@@ -82,7 +82,7 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
     method.insert(0, phr_method, phr_method_len);
 
   for (int i = 0; i < (int)phr_num_headers; i++) {
-    string name, value; 
+    string name, value;
     name.insert(0, phr_headers[i].name, phr_headers[i].name_len);
     value.insert(0, phr_headers[i].value, phr_headers[i].value_len);
     boost::to_lower(name);
@@ -90,7 +90,7 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
   }
 
   return HTTP_REQ_OK;
-} 
+}
 
 /**
   Get the HTTP request path.
