@@ -49,11 +49,11 @@ void SSEStatsHandler::Update() {
   ulong totalErrors      = 0;
   uint  numChannels      = 0;
 
-  boost::property_tree::ptree pt; 
-  boost::property_tree::ptree channels; 
+  boost::property_tree::ptree pt;
+  boost::property_tree::ptree channels;
 
   BOOST_FOREACH(const SSEChannelPtr& chan, _server->GetChannelList()) {
-    boost::property_tree::ptree pt_element; 
+    boost::property_tree::ptree pt_element;
 
     const SSEChannelStats& stat = chan->GetStats();
 
@@ -117,4 +117,4 @@ void SSEStatsHandler::SendToClient(SSEClient* client) {
   res.SetBody(GetJSON());
 
   client->Send(res.Get());
-} 
+}

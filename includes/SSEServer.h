@@ -31,7 +31,7 @@ class SSEServer {
   public:
     SSEServer(SSEConfig* config);
     ~SSEServer();
-    
+
     void Run();
     const SSEChannelList& GetChannelList();
     SSEConfig* GetConfig();
@@ -45,7 +45,7 @@ class SSEServer {
     int _serversocket;
     int _efd;
     struct sockaddr_in _sin;
-    
+
     void InitSocket();
     void AcceptLoop();
     void ClientRouterLoop();

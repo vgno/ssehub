@@ -23,10 +23,10 @@ bool SSEEvent::compile() {
     indata = pt.get<std::string>("data"); // required.
   } catch (...) {
     return false;
-  }  
+  }
 
   try {
-    path = pt.get<std::string>("path"); 
+    path = pt.get<std::string>("path");
     id = pt.get<std::string>("id");
     event = pt.get<std::string>("event");
     retry =  pt.get<int>("retry");
@@ -44,8 +44,8 @@ const string SSEEvent::get() {
 
   if (data.empty() || path.empty()) return "";
 
-  if (!id.empty()) ss << "id: " << id << endl;   
-  if (!event.empty()) ss << "event: " << event << endl;   
+  if (!id.empty()) ss << "id: " << id << endl;
+  if (!event.empty()) ss << "event: " << event << endl;
   if (retry > 0) ss << "retry: " << retry << endl;
 
   vector<string>::iterator it;
@@ -55,7 +55,7 @@ const string SSEEvent::get() {
 
   ss << "\n";
 
-  return ss.str(); 
+  return ss.str();
 }
 
 const string SSEEvent::getpath() {

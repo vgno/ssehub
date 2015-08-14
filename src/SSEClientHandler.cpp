@@ -57,7 +57,7 @@ void SSEClientHandler::ProcessQueue() {
 
    for (SSEClientPtrList::iterator it = _clientlist.begin(); it != _clientlist.end(); it++) {
      SSEClientPtr client = static_cast<SSEClientPtr&>(*it);
-     
+
      if (client->IsDead()) {
        DLOG(INFO) << "Removing disconnected client from clienthandler.";
        it = _clientlist.erase(it);

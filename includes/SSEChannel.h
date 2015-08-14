@@ -52,7 +52,7 @@ class SSEChannel {
     const SSEChannelStats& GetStats();
     void AddClient(SSEClient* client, HTTPRequest* req);
     ulong GetNumClients();
- 
+
   private:
     string _id;
     int _efd;

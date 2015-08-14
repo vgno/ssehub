@@ -21,7 +21,7 @@ void AmqpInputSource::Start() {
   exchange = _config->GetValue("amqp.exchange");
   routingkey = _config->GetValue("amqp.routingkey");
 
-  DLOG(INFO)         << "AmqpInputSource::Start():" << 
+  DLOG(INFO)         << "AmqpInputSource::Start():" <<
     " host: "        << host <<
     " port: "        << port <<
     " user: "        << user <<
@@ -58,7 +58,7 @@ void AmqpInputSource::Reconnect(int delay) {
 bool AmqpInputSource::Connect() {
   amqp_rpc_reply_t rpc_ret;
   int ret;
-  
+
   // Initialize connection.
   amqpConn = amqp_new_connection();
   amqpSocket = amqp_tcp_socket_new(amqpConn);
@@ -107,7 +107,7 @@ bool AmqpInputSource::Connect() {
   LOG_IF(FATAL, amqpQueueName.bytes == NULL) << "Out memory while copying queue name";
 
   // Bind queue.
-  amqp_queue_bind(amqpConn, 1, amqpQueueName, amqp_cstring_bytes(exchange.c_str()), 
+  amqp_queue_bind(amqpConn, 1, amqpQueueName, amqp_cstring_bytes(exchange.c_str()),
   amqp_cstring_bytes(routingkey.c_str()), amqp_empty_table);
 
   rpc_ret = amqp_get_rpc_reply(amqpConn);
