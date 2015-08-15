@@ -49,6 +49,7 @@ class SSEChannel {
     void BroadcastEvent(SSEEvent* event);
     void CacheEvent(SSEEvent* event);
     void SendEventsSince(SSEClient* client, string lastId);
+    void SendCache(SSEClient* client);
     const SSEChannelStats& GetStats();
     void AddClient(SSEClient* client, HTTPRequest* req);
     ulong GetNumClients();
