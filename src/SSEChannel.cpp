@@ -193,7 +193,10 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   // Send event history if requested.
   if (!lastEventId.empty()) {
     SendEventsSince(client, lastEventId);
+  } else if (!req->GetQueryString("getcache").empty()) {
+    SendCache(client);
   }
+
 
   ev.events   = EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR | EPOLLET;
   ev.data.ptr = client;
@@ -260,6 +263,20 @@ void SSEChannel::CacheEvent(SSEEvent* event) {
 void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
   deque<string>::const_iterator it;
   deque<string> events = _cache_adapter->GetEventsSinceId(lastId);
+
+  while (!events.empty()) {
+    client->Send(events.front());
+    events.pop_front();
+  }
+}
+
+/**
+  Send all cached events to client.
+  @param client SSEClient.
+*/
+void SSEChannel::SendCache(SSEClient* client) {
+ deque<string>::const_iterator it;
+ deque<string> events = _cache_adapter->GetAllEvents();
 
   while (!events.empty()) {
     client->Send(events.front());
