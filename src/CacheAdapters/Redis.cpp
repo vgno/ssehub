@@ -11,6 +11,7 @@
 using namespace std;
 extern int stop;
 
+
 Redis::Redis(string key, ChannelConfig config) {
     _key = key;
     _config = config;
@@ -19,15 +20,22 @@ Redis::Redis(string key, ChannelConfig config) {
 }
 
 void Redis::Connect() {
-  boost::asio::ip::address address = boost::asio::ip::address::from_string(_config.server->GetValue("redis.host"));
+  string host = Lookup(_config.server->GetValue("redis.host"));
   const unsigned short port = _config.server->GetValueInt("redis.port");
+
+  if (host.empty()) {
+    LOG(ERROR) << "Failed to look up host for redis adapter " << _config.server->GetValue("redis.host") << " Retrying in 5 seconds.";
+    Reconnect(5);
+    return;
+  }
+  boost::asio::ip::address address = boost::asio::ip::address::from_string(host);
 
   boost::asio::io_service ioService;
   _client = new RedisSyncClient(ioService);
   string errmsg;
 
   if(!_client->connect(address, port, errmsg)) {
-    LOG(ERROR) << "Failed to connect to redis:" << errmsg << "\n retrying in 5 seconds.";
+    LOG(ERROR) << "Failed to connect to redis:" << errmsg << ". Retrying in 5 seconds.";
     Reconnect(5);
     return;
   }
@@ -140,4 +148,15 @@ int Redis::GetSizeOfCachedEvents() {
     size = result.toInt();
   }
   return size;
+}
+
+string Redis::Lookup(string hostname) {
+  hostent * record = gethostbyname(hostname.c_str());
+  if(record == NULL) {
+    return "";
+  }
+  in_addr * address = (in_addr * )record->h_addr;
+  string ip_address = inet_ntoa(* address);
+
+  return ip_address;
 }
