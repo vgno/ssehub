@@ -2,7 +2,9 @@ SSEHub (Server-Sent Events streaming server)
 ============================================
 
 Performant SSE-server implementation written in C++ that supports multiple channels and high traffic loads.
+
 # Key features
+
   - Supports multiple channels both staticly and dynamically-on-the-fly configured.
   - Configurable history cache that can be requested by clients upon reconnect using lastEventId.
   - Configurable "keep-alive" pings.
@@ -12,6 +14,7 @@ Performant SSE-server implementation written in C++ that supports multiple chann
   - Statistics endpoint (/stats).
 
 # Building and running
+
 Install dependencies (using apt in this example):
 ```
 apt-get install g++ make libgoogle-glog-dev libboost-dev libboost-system-dev libboost-thread-dev librabbitmq-dev
@@ -35,6 +38,7 @@ Run:
 There is also a Dockerfile you can use to build a docker image.
 
 # Example configuration
+
 ```json
 {
   "server": {
@@ -73,18 +77,22 @@ There is also a Dockerfile you can use to build a docker image.
   ]
 }
 ```
+
 # Event format
+
 Currently we support RabbitMQ fanout queue as input source.
 Events should be sent in the following format:
 
 ```json
 {
-    "path": "test",
     "id": 1,
+    "path": "test",
+    "event": "message",
     "data": "My event data."
 }
 ```
 
 # License
+
 SSEHub is licensed under MIT.
 See LICENSE.
