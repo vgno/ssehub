@@ -19,7 +19,7 @@
     "port": 6379
   },
   "default": {
-    "cacheAdapter": "redis",
+    "cacheAdapter": "memory",
     "cacheLength": 500,
     "allowedOrigins":  "*"
   },
