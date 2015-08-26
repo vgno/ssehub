@@ -4,6 +4,8 @@
 #include "CacheInterface.h"
 #include <redisclient/redissyncclient.h>
 
+using namespace std;
+
 class Redis : public CacheInterface {
   public:
     Redis(string key, ChannelConfig config);
@@ -18,6 +20,7 @@ class Redis : public CacheInterface {
     void Disconnect();
     void Reconnect(int delay);
     void Expire(int ttl);
+    string Lookup(string hostname);
     RedisSyncClient* _client;
     string _key;
 };
