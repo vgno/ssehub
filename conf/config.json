@@ -20,7 +20,7 @@
     "numConnections": 5
   },
   "default": {
-    "cacheAdapter": "redis",
+    "cacheAdapter": "memory",
     "cacheLength": 500,
     "allowedOrigins":  "*"
   },

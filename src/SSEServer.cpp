@@ -271,8 +271,7 @@ void SSEServer::ClientRouterLoop() {
       if (!req->GetPath().empty()) {
         // Handle /stats endpoint.
         if (req->GetPath().compare("/stats") == 0) {
-          stats.SendToClient(client);
-          client->Destroy();
+          boost::thread(&SSEStatsHandler::SendToClient, stats, client);
           continue;
         }
 
