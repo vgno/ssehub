@@ -28,6 +28,7 @@ void Redis::Connect() {
     Reconnect(5);
     return;
   }
+
   boost::asio::ip::address address = boost::asio::ip::address::from_string(host);
 
   boost::asio::io_service ioService;
@@ -56,7 +57,13 @@ void Redis::Reconnect(int delay) {
 }
 
 void Redis::CacheEvent(SSEEvent* event) {
-  RedisValue result = _client->command("HSET", _key, event->getid(), event->get());
+  RedisValue result;
+  try {
+    result = _client->command("HSET", _key, event->getid(), event->get());
+  } catch (const runtime_error& error) {
+    LOG(ERROR) << "Redis::CacheEvent: " << error.what();
+  }
+
   if (result.isError()) {
     LOG(ERROR) << "SET error: " << result.toString();
   }
@@ -82,7 +89,12 @@ deque<string> Redis::GetEventsSinceId(string lastId) {
   deque<string> events;
   RedisValue result;
 
-  result = _client->command("HGETALL", _key);
+  try {
+    result = _client->command("HGETALL", _key);
+  } catch (const runtime_error& error) {
+    LOG(ERROR) << "Redis::GetEventsSinceId: " << error.what();
+  }
+
   if (result.isError()) {
     LOG(ERROR) << "GET error: " << result.toString();
   }
@@ -112,9 +124,15 @@ deque<string> Redis::GetEventsSinceId(string lastId) {
 }
 
 deque<string> Redis::GetAllEvents() {
+  RedisValue result;
   deque<string> events;
 
-  RedisValue result = _client->command("HGETALL", _key);
+  try {
+    result = _client->command("HGETALL", _key);
+  } catch (const runtime_error& error) {
+    LOG(ERROR) << "Redis::GetEventsSinceId: " << error.what();
+  }
+
   if (result.isError()) {
     LOG(ERROR) << "GET error: " << result.toString();
   }
@@ -140,13 +158,22 @@ deque<string> Redis::GetAllEvents() {
 
 int Redis::GetSizeOfCachedEvents() {
   int size = 0;
-  RedisValue result = _client->command("HLEN", _key);
+  RedisValue result;
+
+  try {
+    result = _client->command("HLEN", _key);
+  } catch (const runtime_error& error) {
+    LOG(ERROR) << "Redis::GetEventsSinceId: " << error.what();
+  }
+
   if (result.isError()) {
     LOG(ERROR) << "GET error: " << result.toString();
   }
+
   if (result.isOk()) {
     size = result.toInt();
   }
+
   return size;
 }
 
