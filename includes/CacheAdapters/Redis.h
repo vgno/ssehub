@@ -20,8 +20,10 @@ class Redis : public CacheInterface {
     void Disconnect();
     void Reconnect(int delay);
     void Expire(int ttl);
+    RedisSyncClient* GetClient();
     string Lookup(string hostname);
-    RedisSyncClient* _client;
+    deque<RedisSyncClient *> _clients;
     string _key;
+    deque<RedisSyncClient *>::iterator _curclient;
 };
 #endif

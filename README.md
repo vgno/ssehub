@@ -32,7 +32,7 @@ cd ssehub && make
 
 Run:
 ```
-./ssehub -config path/to/config.json (will use ./conf/config.json as default).
+./ssehub --config path/to/config.json (will use ./conf/config.json as default).
 ```
 
 There is also a Dockerfile you can use to build a docker image.
