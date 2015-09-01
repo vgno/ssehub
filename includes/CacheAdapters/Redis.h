@@ -3,8 +3,11 @@
 
 #include "CacheInterface.h"
 #include <redisclient/redissyncclient.h>
+#include <boost/shared_ptr.hpp>
 
 using namespace std;
+
+typedef boost::shared_ptr<RedisSyncClient> RedisSyncClientPtr;
 
 class Redis : public CacheInterface {
   public:
@@ -22,8 +25,8 @@ class Redis : public CacheInterface {
     void Expire(int ttl);
     RedisSyncClient* GetClient();
     string Lookup(string hostname);
-    deque<RedisSyncClient *> _clients;
+    deque<RedisSyncClientPtr> _clients;
     string _key;
-    deque<RedisSyncClient *>::iterator _curclient;
+    deque<RedisSyncClientPtr>::iterator _curclient;
 };
 #endif

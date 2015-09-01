@@ -117,4 +117,5 @@ void SSEStatsHandler::SendToClient(SSEClient* client) {
   res.SetBody(GetJSON());
 
   client->Send(res.Get());
+  client->Destroy();
 }
