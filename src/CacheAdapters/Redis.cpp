@@ -32,16 +32,15 @@ void Redis::Connect() {
 
   boost::asio::ip::address address = boost::asio::ip::address::from_string(host);
   boost::asio::io_service ioService;
-  RedisSyncClient* client;
   string errmsg;
 
   LOG(INFO) << "Creating redis pool of " << _config.server->GetValue("redis.numConnections") << " connections.";
 
   for (unsigned int i = 0; i < NUM_CONNECTIONS; i++) {
-    client = new RedisSyncClient(ioService);
+    RedisSyncClient* client = new RedisSyncClient(ioService);
 
     if(client->connect(address, port, errmsg)) {
-      _clients.push_back(client);
+      _clients.push_back(RedisSyncClientPtr(client));
       LOG(INFO) << "Connected to redis server " << _config.server->GetValue("redis.host") << ":" << _config.server->GetValue("redis.port");
     } else {
       LOG(ERROR) << "Failed to connect to redis:" << errmsg << ". Retrying in 5 seconds.";
@@ -68,7 +67,7 @@ void Redis::Reconnect(int delay) {
 }
 
 RedisSyncClient* Redis::GetClient() {
-  RedisSyncClient* client = (*_curclient);
+  RedisSyncClient* client = (*_curclient).get();
   _curclient++;
   if (_curclient == _clients.end()) _curclient = _clients.begin();
 
