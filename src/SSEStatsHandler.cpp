@@ -2,9 +2,11 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <unistd.h>
 #include <string>
 #include <sstream>
+#include <time.h>
 #include "Common.h"
 #include "SSEChannel.h"
 #include "SSEServer.h"
@@ -39,6 +41,7 @@ SSEStatsHandler::~SSEStatsHandler() {
 void SSEStatsHandler::Init(SSEConfig* config, SSEServer* server) {
   _config = config;
   _server = server;
+  _startTime = time(NULL);
 }
 
 void SSEStatsHandler::Update() {
@@ -76,6 +79,10 @@ void SSEStatsHandler::Update() {
     channels.push_back(std::make_pair("", pt_element));
   }
 
+  boost::posix_time::time_duration uptime;
+  uptime = boost::posix_time::seconds((int)time(NULL) - _startTime);
+
+  pt.put("global.uptime", boost::posix_time::to_simple_string(uptime));
   pt.put("global.clients", totalClients);
   pt.put("global.broadcasted_events", totalEvents);
   pt.put("global.channel_connects", totalConnects);

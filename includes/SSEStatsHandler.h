@@ -28,6 +28,7 @@ class SSEStatsHandler {
     std::string _jsonData;
     SSEConfig* _config;
     SSEServer* _server;
+    int _startTime;
 
     void Update();
 };
