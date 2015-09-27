@@ -14,13 +14,13 @@
     "password": "guest",
     "exchange": "amq.fanout"
   },
-  "redis": {
+  "memory": {
     "host": "127.0.0.1",
     "port": 6379,
     "numConnections": 5
   },
   "default": {
-    "cacheAdapter": "redis",
+    "cacheAdapter": "memory",
     "cacheLength": 500,
     "allowedOrigins":  "*"
   },
