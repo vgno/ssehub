@@ -7,6 +7,7 @@
 using namespace std;
 
 struct ChannelConfig {
+  string              id;
   class SSEConfig*    server;
   std::vector<string> allowedOrigins;
   string              cacheAdapter;

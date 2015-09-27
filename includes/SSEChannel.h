@@ -16,6 +16,7 @@
 #include "SSEConfig.h"
 #include "CacheAdapters/Memory.h"
 #include "CacheAdapters/Redis.h"
+#include "CacheAdapters/LevelDB.h"
 
 using namespace std;
 
@@ -55,7 +56,6 @@ class SSEChannel {
     ulong GetNumClients();
 
   private:
-    string _id;
     int _efd;
     ClientHandlerList::iterator curthread;
     ChannelConfig _config;

@@ -5,9 +5,7 @@
 
 using namespace std;
 
-Memory::Memory(ChannelConfig config) {
-    _config = config;
-}
+Memory::Memory(const ChannelConfig& config) : _config(config) {}
 
 void Memory::CacheEvent(SSEEvent* event) {
   // If we have the event id in our vector already don't remove it.

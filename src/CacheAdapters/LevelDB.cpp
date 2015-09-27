@@ -5,8 +5,8 @@
 
 using namespace std;
 
-LevelDB::LevelDB(ChannelConfig config) {
-  _config = config;
+LevelDB::LevelDB(const ChannelConfig& config) : _config(config) {
+  const string cachefile = config.id + ".db";
   InitDB("level.db");
   _cachesize = GetSizeOfCachedEvents();
 }

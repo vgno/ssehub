@@ -12,10 +12,7 @@ using namespace std;
 extern int stop;
 
 
-Redis::Redis(string key, ChannelConfig config) {
-    _key = key;
-    _config = config;
-
+Redis::Redis(const string key, const ChannelConfig& config) : _config(config), _key(key) {
     Connect();
 }
 

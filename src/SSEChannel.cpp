@@ -15,12 +15,12 @@ extern int stop;
 
 /**
   Constructor.
-  @param conf Pointer to SSEConfig instance holding our _config.ration.
+  @param conf Pointer to SSEConfig instance holding our configuration.
   @param id Unique identifier for this channel.
 */
 SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
-  _id = id;
   _config = conf;
+  _config.id = id;
 
   _efd = epoll_create1(0);
   LOG_IF(FATAL, _efd == -1) << "epoll_create1 failed.";
@@ -35,7 +35,7 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   _stats.cache_size            = _config.cacheLength;
 
 
-  LOG(INFO) << "Initializing channel " << _id;
+  LOG(INFO) << "Initializing channel " << _config.id;
   LOG(INFO) << "Cache Adapter: " << _config.cacheAdapter;
   LOG(INFO) << "Cache length: " << _config.cacheLength;
   LOG(INFO) << "Threads per channel: " << _config.server->GetValue("server.threadsPerChannel");
@@ -71,9 +71,11 @@ SSEChannel::~SSEChannel() {
 void SSEChannel::InitializeCache() {
   const string adapter = _config.cacheAdapter;
   if (adapter == "redis") {
-    _cache_adapter = new Redis(_id, _config);
+    _cache_adapter = new Redis(_config.id, _config);
   } else if (adapter == "memory") {
     _cache_adapter = new Memory(_config);
+  } else if (adapter == "leveldb") {
+    _cache_adapter = new LevelDB(_config);
   }
 }
 
@@ -107,7 +109,7 @@ void SSEChannel::CleanupThreads() {
   Return the id of this channel.
 */
 string SSEChannel::GetId() {
-  return _id;
+  return _config.id;
 }
 
 /**
@@ -305,12 +307,12 @@ void SSEChannel::CleanupMain() {
           INC_LONG(_stats.num_disconnects);
         }
       } else if ((t_events[i].events & EPOLLHUP)  || (t_events[i].events & EPOLLRDHUP)) {
-        DLOG(INFO) << "Channel " << _id << ": Client disconnected.";
+        DLOG(INFO) << "Channel " << _config.id << ": Client disconnected.";
         client->MarkAsDead();
         INC_LONG(_stats.num_disconnects);
       } else if (t_events[i].events & EPOLLERR) {
         // If an error occours on a client socket, just drop the connection.
-        DLOG(INFO) << "Channel " << _id << ": Error on client socket: " << strerror(errno);
+        DLOG(INFO) << "Channel " << _config.id << ": Error on client socket: " << strerror(errno);
         client->MarkAsDead();
         INC_LONG(_stats.num_errors);
       }

@@ -6,14 +6,14 @@
 
 class LevelDB : public CacheInterface {
   public:
-    LevelDB(ChannelConfig config);
+    LevelDB(const ChannelConfig& config);
     ~LevelDB();
     void InitDB(const string& dbfile); 
     void CacheEvent(SSEEvent* event);
     deque<string> GetEventsSinceId(string lastId);
     deque<string> GetAllEvents();
     int GetSizeOfCachedEvents();
-    ChannelConfig _config;
+    const ChannelConfig& _config;
 
   private:
     leveldb_t* _db;
