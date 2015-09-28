@@ -18,7 +18,7 @@ extern int stop;
   @param conf Pointer to SSEConfig instance holding our configuration.
   @param id Unique identifier for this channel.
 */
-SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
+SSEChannel::SSEChannel(ChannelConfig conf, string id) {
   _config = conf;
   _config.id = id;
 
@@ -190,7 +190,6 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   }
 
   client->Send(res.Get());
-  client->DeleteHttpReq();
 
   // Send event history if requested.
   if (!lastEventId.empty()) {
@@ -198,7 +197,8 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   } else if (!req->GetQueryString("getcache").empty()) {
     SendCache(client);
   }
-
+  
+  client->DeleteHttpReq();
 
   ev.events   = EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR | EPOLLET;
   ev.data.ptr = client;
@@ -209,7 +209,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
     client->Destroy();
     return;
   }
-
+  
   INC_LONG(_stats.num_connects);
 
   // Add client to handler thread in a round-robin fashion.

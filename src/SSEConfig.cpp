@@ -41,6 +41,8 @@ void SSEConfig::InitDefaults() {
  ConfigMap["redis.port"]                      = "6379";
  ConfigMap["redis.numConnections"]            = "5";
 
+ ConfigMap["leveldb.storageDir"]              = ".";
+
  ConfigMap["default.cacheAdapter"]            = "redis";
  ConfigMap["default.cacheLength"]             = "500";
 }

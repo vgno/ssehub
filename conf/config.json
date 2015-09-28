@@ -14,13 +14,16 @@
     "password": "guest",
     "exchange": "amq.fanout"
   },
-  "memory": {
+  "redis": {
     "host": "127.0.0.1",
     "port": 6379,
     "numConnections": 5
   },
+  "leveldb": {
+    "storageDir": "/tmp"
+  },
   "default": {
-    "cacheAdapter": "memory",
+    "cacheAdapter": "leveldb",
     "cacheLength": 500,
     "allowedOrigins":  "*"
   },
@@ -28,11 +31,11 @@
     {
         "path": "test",
         "allowedOrigins": ["https://some.host"],
-        "cacheLength": 50
+        "cacheLength": 1
     },
     {
         "path": "test2",
-        "cacheAdapter": "memory"
+        "cacheAdapter": "leveldb"
     }
   ]
 }

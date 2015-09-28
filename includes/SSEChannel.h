@@ -43,7 +43,7 @@ struct SSEChannelStats {
 
 class SSEChannel {
   public:
-    SSEChannel(ChannelConfig& conf, string id);
+    SSEChannel(ChannelConfig conf, string id);
     ~SSEChannel();
     string GetId();
     void Broadcast(const string& data);

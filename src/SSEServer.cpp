@@ -177,8 +177,8 @@ void SSEServer::AcceptLoop() {
     if (tmpfd == -1) {
       switch (errno) {
         case EMFILE:
-          LOG(ERROR) << "All connections available used. Cannot accept more connections.";
-          usleep(100000);
+          LOG(ERROR) << "All connections available used. Exiting.";
+          exit(1);
         break;
 
         default:
