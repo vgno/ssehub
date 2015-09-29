@@ -62,7 +62,7 @@ void LevelDB::CacheEvent(SSEEvent* event) {
       LOG(ERROR) << "Failed to delete key " << key << ": " << err;
       leveldb_free(err);
     } else {
-      LOG(INFO) << "Deleted key " << key;
+      DLOG(INFO) << "Deleted key " << key;
     }
 
     leveldb_iter_destroy(it);

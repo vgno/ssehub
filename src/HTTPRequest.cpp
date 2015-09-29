@@ -2,6 +2,7 @@
 #include <string.h>
 #include <iostream>
 #include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 #include "../lib/picohttpparser/picohttpparser.h"
 #include "Common.h"
 #include "HTTPRequest.h"
@@ -13,7 +14,11 @@ HTTPRequest::HTTPRequest() {
   httpReq_bytesRead = 0;
   httpReq_bytesReadPrev = 0;
   httpReq_isComplete = false;
+  httpReq_isPost = false;
   b_success = false;
+  post_data = "";
+  post_expected_size = 0;
+  post_recv_size = 0;
   DLOG(INFO) << "New HTTPRequest";
 }
 
@@ -29,6 +34,19 @@ HTTPRequest::~HTTPRequest() {}
 **/
 HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
   int pret;
+
+  if (httpReq_isPost) {
+    post_recv_size += len; 
+    AppendPostData(data);
+
+    DLOG(INFO) << "isPost: post_recv_size: " << post_recv_size << " post_expected_size: " << post_expected_size;
+
+    if (post_recv_size < post_expected_size) {
+      return HTTP_REQ_POST_INCOMPLETE;
+    }
+
+    return HTTP_REQ_POST_OK;
+  }
 
   if (httpReq_isComplete) return HTTP_REQ_OK;
   httpReq_bytesReadPrev = httpReq_bytesRead;
@@ -59,9 +77,10 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
     return HTTP_REQ_INCOMPLETE;
   }
 
-  httpReq_isComplete = true;
-  httpReq_buf[httpReq_bytesRead] = '\0';
-  DLOG(INFO) << "HTTP_REQ_OK";
+  DLOG(INFO) << "pret: " << pret << " len: " << len;
+
+  if (phr_method_len > 0)
+    method.insert(0, phr_method, phr_method_len);
 
   if (phr_path_len > 0) {
     string rawPath;
@@ -78,9 +97,6 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
     }
   }
 
-  if (phr_method_len > 0)
-    method.insert(0, phr_method, phr_method_len);
-
   for (int i = 0; i < (int)phr_num_headers; i++) {
     string name, value;
     name.insert(0, phr_headers[i].name, phr_headers[i].name_len);
@@ -88,6 +104,38 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
     boost::to_lower(name);
     headers[name] = value;
   }
+
+  if (GetMethod().compare("POST") == 0) {
+    if (GetHeader("Content-Length").empty()) {
+      DLOG(ERROR) << "Post request failed - no Content-Length header set.";
+      return HTTP_REQ_POST_LENGTH_REQUIRED;
+    } else {
+      try  {
+        post_expected_size = boost::lexical_cast<int>(GetHeader("Content-Length"));
+      } catch(...) {
+        return HTTP_REQ_INVALID_POST_LENGTH;
+      }
+    }
+
+    if (post_expected_size < 1) {
+      return HTTP_REQ_POST_LENGTH_ZERO;
+    }
+
+    httpReq_isPost = true;
+
+    // If we have post data in the initial request run Parse on it to take correct action.
+    if (len > pret) {
+      string tmp;
+      tmp.insert(0, data, pret, len-pret);
+      return Parse(tmp.c_str(), tmp.length());
+    }
+
+    return HTTP_REQ_POST_START;
+ }
+
+  httpReq_isComplete = true;
+  httpReq_buf[httpReq_bytesRead] = '\0';
+  DLOG(INFO) << "HTTP_REQ_OK"; 
 
   return HTTP_REQ_OK;
 }
@@ -181,4 +229,12 @@ const string HTTPRequest::GetQueryString(string param) {
 **/
 size_t HTTPRequest::NumQueryString() {
   return qsmap.size();
+}
+
+void HTTPRequest::AppendPostData(const char* data) {
+  post_data.append(data);
+}
+
+const string& HTTPRequest::GetPostData() {
+  return post_data;
 }
