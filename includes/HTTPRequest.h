@@ -6,6 +6,7 @@
 #include "../lib/picohttpparser/picohttpparser.h"
 
 #define HTTPREQ_BUFSIZ 8192
+#define HTTP_POST_MAX 8192000
 #define HTTP_REQUEST_MAX_HEADERS 100
 
 using namespace std;
@@ -15,10 +16,9 @@ enum HttpReqStatus {
   HTTP_REQ_INCOMPLETE,
   HTTP_REQ_TO_BIG,
   HTTP_REQ_POST_START,
-  HTTP_REQ_POST_LENGTH_REQUIRED,
-  HTTP_REQ_INVALID_POST_LENGTH,
-  HTTP_REQ_POST_LENGTH_ZERO,
+  HTTP_REQ_POST_INVALID_LENGTH,
   HTTP_REQ_POST_INCOMPLETE,
+  HTTP_REQ_POST_TOO_LARGE,
   HTTP_REQ_POST_OK,
   HTTP_REQ_OK
 };
@@ -35,8 +35,8 @@ class HTTPRequest {
     const string GetHeader(string header);
     const string GetQueryString(string param);
     size_t NumQueryString();
-    void AppendPostData(const char* data);
     const string& GetPostData();
+    const string& GetErrorMessage();
 
   private:
     int http_minor_version;
@@ -44,6 +44,8 @@ class HTTPRequest {
     std::string httpReq_buf;
     int httpReq_bytesRead;
     int httpReq_bytesReadPrev;
+    int httpReq_post_expected_size;
+    int httpReq_post_bytesRead;
     bool httpReq_isComplete;
     bool httpReq_isPost;
 
@@ -55,8 +57,7 @@ class HTTPRequest {
     string path;
     string method;
     string post_data;
-    int post_expected_size;
-    int post_recv_size;
+    string error_message;
     map<string, string> headers;
     map<string, string> query_parameters;
     map<string, string> qsmap;

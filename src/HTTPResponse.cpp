@@ -6,11 +6,10 @@
 
 #define CRLF "\r\n"
 
-HTTPResponse::HTTPResponse() {
-  m_statusCode = 200;
-  m_statusMsg = "OK";
-  SetHeader("Content-Type", "text/html");
-  SetHeader("Connection", "close");
+HTTPResponse::HTTPResponse(int statusCode, bool close) {
+  m_statusCode = statusCode;
+  m_statusMsg = GetStatusMsg(statusCode);
+  if (close) SetHeader("Connection", "close");
 }
 
 void HTTPResponse::SetStatus(int status, std::string statusMsg) {
@@ -33,8 +32,19 @@ void HTTPResponse::AppendBody(const std::string& data) {
 const std::string HTTPResponse::Get() {
   std::stringstream ss;
 
-  if ((m_headers["Connection"].compare("close") == 0) && m_body.size() > 0)
-    SetHeader("Content-Length", boost::lexical_cast<std::string>(m_body.size()));
+  try {
+    m_headers.at("Connection");
+
+    if ((m_headers["Connection"].compare("close") == 0) && m_body.size() > 0) {
+      SetHeader("Content-Length", boost::lexical_cast<std::string>(m_body.size()));
+    }
+  } catch (...) {}
+
+  try {
+    m_headers.at("Content-Type");
+  } catch (...) {
+    if (m_statusCode == 200) SetHeader("Content-Type", "text/html");
+  }
 
   ss << "HTTP/1.1 " << m_statusCode << " " << m_statusMsg << CRLF;
 
@@ -47,4 +57,13 @@ const std::string HTTPResponse::Get() {
   return ss.str();
 }
 
+const std::string HTTPResponse::GetStatusMsg(int statusCode) {
+  switch (statusCode) {
+    case 200: return "OK";
+    case 100: return "Continue";
+    case 411: return "Length required.";
+    case 413: return "Request entity too large.";
+  }
 
+  return "OK";
+}

@@ -240,8 +240,6 @@ void SSEServer::ClientRouterLoop() {
       // Read from client.
       size_t len = client->Read(&buf, 4096);
 
-      LOG(INFO) << "len: " << len;
-
       if (len <= 0) {
         stats.router_read_errors++;
         client->Destroy();
@@ -267,27 +265,22 @@ void SSEServer::ClientRouterLoop() {
          stats.oversized_http_req++;
          continue;
 
+        case HTTP_REQ_POST_INVALID_LENGTH:
+          { HTTPResponse res(411, false); client->Send(res.Get()); }
+          client->Destroy();
+          continue;
+
+        case HTTP_REQ_POST_TOO_LARGE:
+          DLOG(INFO) << "Client " <<  client->GetIP() << " sent too much POST data.";
+          { HTTPResponse res(413, false); client->Send(res.Get()); }
+          client->Destroy();
+          continue;
+
         case HTTP_REQ_POST_START:
-         client->Send("HTTP/1.1 100 Continue\r\n\r\n");
-         continue;
-
-        case HTTP_REQ_POST_INCOMPLETE: 
-         continue;
-
-        case HTTP_REQ_POST_LENGTH_ZERO:
-          DLOG(INFO) << "Client " <<  client->GetIP() << " sent POST request with Content-Length 0.";
-          client->Destroy();
+          { HTTPResponse res(100, false); client->Send(res.Get()); }
           continue;
 
-        case HTTP_REQ_INVALID_POST_LENGTH:
-          DLOG(INFO) << "Client " <<  client->GetIP() << " sent POST request with invalid Content-Length.";
-          client->Destroy();
-          continue;
-        
-        case HTTP_REQ_POST_LENGTH_REQUIRED:
-          DLOG(INFO) << "Client " <<  client->GetIP() << " sent POST request with no Content-Length.";
-          client->Destroy();
-          continue;
+        case HTTP_REQ_POST_INCOMPLETE: continue;
 
         case HTTP_REQ_POST_OK:
           LOG(INFO) << client->GetIP() << ": POST";

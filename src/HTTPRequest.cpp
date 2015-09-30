@@ -13,13 +13,13 @@
 HTTPRequest::HTTPRequest() {
   httpReq_bytesRead = 0;
   httpReq_bytesReadPrev = 0;
+  httpReq_post_expected_size = 0;
+  httpReq_post_bytesRead = 0;
   httpReq_isComplete = false;
   httpReq_isPost = false;
-  b_success = false;
   post_data = "";
-  post_expected_size = 0;
-  post_recv_size = 0;
-  DLOG(INFO) << "New HTTPRequest";
+  error_message = "";
+  b_success = false;
 }
 
 /**
@@ -36,12 +36,18 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
   int pret;
 
   if (httpReq_isPost) {
-    post_recv_size += len; 
-    AppendPostData(data);
+    httpReq_post_bytesRead += len;
 
-    DLOG(INFO) << "isPost: post_recv_size: " << post_recv_size << " post_expected_size: " << post_expected_size;
+    if (httpReq_post_bytesRead > HTTP_POST_MAX) {
+      DLOG(ERROR) << "HTTP_REQ_POST_TOO_LARGE " << "POST data is bigger than " << HTTP_POST_MAX;
+      error_message = "HTTP_REQ_POST_TOO_LARGE: POST data is to large.";
+      post_data.clear();
+      return HTTP_REQ_POST_TOO_LARGE;
+    }
 
-    if (post_recv_size < post_expected_size) {
+    post_data.append(data);
+
+    if (httpReq_post_bytesRead < httpReq_post_expected_size) {
       return HTTP_REQ_POST_INCOMPLETE;
     }
 
@@ -53,7 +59,7 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
 
   // Request is to large.
   if ((httpReq_bytesRead + len) > HTTPREQ_BUFSIZ) {
-    DLOG(ERROR) << "HTTP_REQ_FAILED " << "Request to large.";
+    error_message = "HTTP_REQ_TO_BIG: Request to large.";
     return HTTP_REQ_TO_BIG;
   }
 
@@ -68,6 +74,7 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
   // Parse error.
   if (pret == -1) {
     DLOG(ERROR) << "HTTP_REQ_FAILED";
+    error_message = "HTTP_REQ_FAILED: Parse failed.";
     return HTTP_REQ_FAILED;
   }
 
@@ -76,8 +83,6 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
     DLOG(INFO) << "HTTP_REQ_INCOMPLETE";
     return HTTP_REQ_INCOMPLETE;
   }
-
-  DLOG(INFO) << "pret: " << pret << " len: " << len;
 
   if (phr_method_len > 0)
     method.insert(0, phr_method, phr_method_len);
@@ -107,18 +112,20 @@ HttpReqStatus HTTPRequest::Parse(const char *data, int len) {
 
   if (GetMethod().compare("POST") == 0) {
     if (GetHeader("Content-Length").empty()) {
-      DLOG(ERROR) << "Post request failed - no Content-Length header set.";
-      return HTTP_REQ_POST_LENGTH_REQUIRED;
+      error_message = "HTTP_REQ_POST_INVALID_LENGTH: No Content-Length header set.";
+      return HTTP_REQ_POST_INVALID_LENGTH;
     } else {
       try  {
-        post_expected_size = boost::lexical_cast<int>(GetHeader("Content-Length"));
+        httpReq_post_expected_size = boost::lexical_cast<int>(GetHeader("Content-Length"));
       } catch(...) {
-        return HTTP_REQ_INVALID_POST_LENGTH;
+        error_message = "HTTP_REQ_POST_INVALID_LENGTH: Invalid format.";
+        return HTTP_REQ_POST_INVALID_LENGTH;
       }
     }
 
-    if (post_expected_size < 1) {
-      return HTTP_REQ_POST_LENGTH_ZERO;
+    if (httpReq_post_expected_size < 1) {
+      error_message = "HTTP_REQ_POST_INVAID_LENGTH: Cannot be zero.";
+      return HTTP_REQ_POST_INVALID_LENGTH;
     }
 
     httpReq_isPost = true;
@@ -231,10 +238,10 @@ size_t HTTPRequest::NumQueryString() {
   return qsmap.size();
 }
 
-void HTTPRequest::AppendPostData(const char* data) {
-  post_data.append(data);
-}
-
 const string& HTTPRequest::GetPostData() {
   return post_data;
+}
+
+const string& HTTPRequest::GetErrorMessage() {
+  return error_message;
 }
