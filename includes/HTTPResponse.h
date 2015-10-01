@@ -8,7 +8,7 @@ typedef std::map<std::string, std::string> HeaderList_t;
 
 class HTTPResponse {
   public:
-    HTTPResponse(int statusCode=200, bool close=true);
+    HTTPResponse(int statusCode=200, const std::string body="", bool close=true);
     void SetStatus(int status, std::string statusMsg);
     void SetHeader(const std::string& name, const std::string& value);
     void SetBody(const std::string& data);

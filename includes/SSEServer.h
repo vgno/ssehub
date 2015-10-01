@@ -15,6 +15,7 @@
 #include <string>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include "SSEEvent.h"
 #include "SSEStatsHandler.h"
 #define MAXEVENTS 1024
 
@@ -50,6 +51,8 @@ class SSEServer {
     void AcceptLoop();
     void ClientRouterLoop();
     void BroadcastCallback(std::string);
+    void Broadcast(SSEEvent& event, const string targetChannel="");
+    void PostHandler(SSEClient* client);
     void InitChannels();
     SSEChannel* GetChannel(const std::string id);
 };

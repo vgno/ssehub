@@ -31,7 +31,7 @@
     {
         "path": "test",
         "allowedOrigins": ["https://some.host"],
-        "cacheLength": 1
+        "cacheLength": 5
     },
     {
         "path": "test2",

@@ -70,6 +70,41 @@ void SSEServer::BroadcastCallback(string msg) {
   ch->BroadcastEvent(event);
 }
 
+void SSEServer::Broadcast(SSEEvent& event, const string targetChannel) {
+  SSEChannel* ch;
+  const string& chName = targetChannel.empty() ? event.getpath() : targetChannel;
+
+  if (chName.empty()) { return; }
+
+  ch = GetChannel(chName);
+
+  if (ch == NULL) {
+    if (!_config->GetValueBool("server.allowUndefinedChannels")) {
+        LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
+        return;
+    }
+
+    ch = new SSEChannel(_config->GetDefaultChannelConfig(), chName);
+    _channels.push_back(SSEChannelPtr(ch));
+  }
+
+  ch->BroadcastEvent(&event);
+}
+
+void SSEServer::PostHandler(SSEClient* client) {
+  HTTPRequest* req = client->GetHttpReq();
+  SSEEvent event(req->GetPostData());
+
+  if (event.compile()) {
+    Broadcast(event);
+    HTTPResponse res(200);
+    client->Send(res.Get());
+  } else {
+    HTTPResponse res(400);
+    client->Send(res.Get());
+  }
+}
+
 /**
   Start the server.
 */
@@ -266,25 +301,24 @@ void SSEServer::ClientRouterLoop() {
          continue;
 
         case HTTP_REQ_POST_INVALID_LENGTH:
-          { HTTPResponse res(411, false); client->Send(res.Get()); }
+          { HTTPResponse res(411, "", false); client->Send(res.Get()); }
           client->Destroy();
           continue;
 
         case HTTP_REQ_POST_TOO_LARGE:
           DLOG(INFO) << "Client " <<  client->GetIP() << " sent too much POST data.";
-          { HTTPResponse res(413, false); client->Send(res.Get()); }
+          { HTTPResponse res(413, "", false); client->Send(res.Get()); }
           client->Destroy();
           continue;
 
         case HTTP_REQ_POST_START:
-          { HTTPResponse res(100, false); client->Send(res.Get()); }
+          { HTTPResponse res(100, "", false); client->Send(res.Get()); }
           continue;
 
         case HTTP_REQ_POST_INCOMPLETE: continue;
 
         case HTTP_REQ_POST_OK:
-          LOG(INFO) << client->GetIP() << ": POST";
-          LOG(INFO) << "Data: " << req->GetPostData();
+          PostHandler(client);
           client->Destroy();
           continue;
 

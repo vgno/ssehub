@@ -6,9 +6,10 @@
 
 #define CRLF "\r\n"
 
-HTTPResponse::HTTPResponse(int statusCode, bool close) {
+HTTPResponse::HTTPResponse(int statusCode, const std::string body, bool close) {
   m_statusCode = statusCode;
   m_statusMsg = GetStatusMsg(statusCode);
+  m_body = body;
   if (close) SetHeader("Connection", "close");
 }
 
@@ -43,7 +44,7 @@ const std::string HTTPResponse::Get() {
   try {
     m_headers.at("Content-Type");
   } catch (...) {
-    if (m_statusCode == 200) SetHeader("Content-Type", "text/html");
+    if (m_statusCode == 200 && !m_body.empty()) SetHeader("Content-Type", "text/html");
   }
 
   ss << "HTTP/1.1 " << m_statusCode << " " << m_statusMsg << CRLF;
@@ -61,6 +62,7 @@ const std::string HTTPResponse::GetStatusMsg(int statusCode) {
   switch (statusCode) {
     case 200: return "OK";
     case 100: return "Continue";
+    case 400: return "Bad Request.";
     case 411: return "Length required.";
     case 413: return "Request entity too large.";
   }
