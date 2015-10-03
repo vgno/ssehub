@@ -83,6 +83,10 @@ const string SSEClient::GetIP() {
   return ip;
 }
 
+uint32_t SSEClient::GetSockAddr() {
+  return _csin.sin_addr.s_addr;
+}
+
 HTTPRequest* SSEClient::GetHttpReq() {
   return m_httpReq.get();
 }

@@ -36,6 +36,7 @@ class SSEServer {
     void Run();
     const SSEChannelList& GetChannelList();
     SSEConfig* GetConfig();
+    bool Broadcast(SSEEvent& event);
 
   private:
     SSEConfig *_config;
@@ -50,8 +51,6 @@ class SSEServer {
     void InitSocket();
     void AcceptLoop();
     void ClientRouterLoop();
-    void BroadcastCallback(std::string);
-    void Broadcast(SSEEvent& event, const string targetChannel="");
     void PostHandler(SSEClient* client);
     void InitChannels();
     SSEChannel* GetChannel(const std::string id);

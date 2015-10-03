@@ -8,6 +8,8 @@
 #include <boost/foreach.hpp>
 #include <boost/any.hpp>
 #include <boost/optional.hpp>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "Common.h"
 #include "SSEConfig.h"
 
@@ -64,6 +66,7 @@ bool SSEConfig::load(const char *file) {
   // Populate ConfigMap.
   BOOST_FOREACH(ConfigMap_t::value_type &element, ConfigMap) {
     try {
+  // Event broadcasted OK..
       string val = pt.get<std::string>(element.first);
       ConfigMap[element.first] = val;
       DLOG(INFO) << element.first << " = " << ConfigMap[element.first];
@@ -93,6 +96,36 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
     LOG(FATAL) << "Failed to fetch default allowedOrigins from config: " << e.what();
   }
 
+  // Get default POST restrictions.
+  try {
+   vector<string> RestrictPost;
+   GetArray(RestrictPost, pt.get_child("default.restrictPost"));
+
+   BOOST_FOREACH(const std::string& range_str, RestrictPost) {
+    string range, cidr;
+    uint32_t mask;
+    struct in_addr range_in;
+    iprange_t iprange;
+
+    size_t cidr_start = range_str.find("/");
+    LOG_IF(FATAL, cidr_start == string::npos) << "restrictPost: Invalid IP range " << range_str;
+
+    range.insert(0, range_str, 0, cidr_start);
+    cidr.insert(0, range_str, cidr_start + 1, string::npos);
+    mask = (~0U) << (32-(boost::lexical_cast<int>(cidr)));
+
+    LOG_IF(FATAL, inet_aton(range.c_str(), &range_in) == 0) << "restrictPost Invalid IP " << range;
+    
+    DLOG(INFO) << "restrictPost allow " << range << "/" << cidr;
+    iprange.range = range_in.s_addr;
+    iprange.mask = mask;
+
+    DefaultChannelConfig.allowedPublishers.push_back(iprange);
+   }
+  } catch(std::exception &e) {
+    LOG(FATAL) << "Error parsing restrictPost entry in config: " << e.what();
+  }
+
   // Populate ChannelMap.
   try {
    BOOST_FOREACH(boost::property_tree::ptree::value_type& child, pt.get_child("channels")) {
@@ -114,6 +147,8 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
     } catch (...) {
       ChannelMap[chName].allowedOrigins = DefaultAllowedOrigins;
     }
+
+    ChannelMap[chName].allowedPublishers = DefaultChannelConfig.allowedPublishers;
 
     // Optional channel parameters.
     ChannelMap[chName].cacheAdapter = child.second.get<std::string>("cacheAdapter", DefaultChannelConfig.cacheAdapter);

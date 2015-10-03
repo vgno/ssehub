@@ -1,6 +1,8 @@
 #include "Common.h"
 #include <unistd.h>
 #include "SSEConfig.h"
+#include "SSEEvent.h"
+#include "SSEServer.h"
 #include "InputSources/amqp/AmqpInputSource.h"
 
 using namespace std;
@@ -151,7 +153,13 @@ void AmqpInputSource::Consume() {
      string key;
      msg.insert(0, (const char*)envelope.message.body.bytes, envelope.message.body.len);
      key.insert(0, (const char*)envelope.routing_key.bytes, envelope.routing_key.len);
-     _callback(msg);
+    
+     SSEEvent event(msg);
+     event.setpath(key);
+
+     if (event.compile()) {
+       _server->Broadcast(event);
+     }
     }
 
     amqp_destroy_envelope(&envelope);

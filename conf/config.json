@@ -5,7 +5,7 @@
     "logdir": "./",
     "pingInterval": 5,
     "threadsPerChannel": 2,
-    "allowUndefinedChannels": "true"
+    "allowUndefinedChannels": "false"
   },
   "amqp": {
     "host": "127.0.0.1",
@@ -25,7 +25,11 @@
   "default": {
     "cacheAdapter": "leveldb",
     "cacheLength": 500,
-    "allowedOrigins":  "*"
+    "allowedOrigins":  "*",
+    "restrictPost": [ 
+      "127.0.0.1/32",
+      "10.84.0.0/16"
+    ]
   },
   "channels": [
     {

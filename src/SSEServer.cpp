@@ -33,55 +33,17 @@ SSEServer::~SSEServer() {
   close(_efd);
 }
 
-/**
-  AMQP callback function that will be called when a message arrives.
-  @param key AMQP routingkey,
-  @param msg AMQP message.
-*/
-void SSEServer::BroadcastCallback(string msg) {
-  SSEEvent* event = new SSEEvent(msg);
-
-  if (!event->compile()) {
-    LOG(ERROR) << "Discarding event with invalid format.";
-    delete(event);
-    stats.invalid_events_rcv++;
-    return;
-  }
-
-  string chName;
-  // If path is set in the JSON event data use that as target channel name.
-  if (!event->getpath().empty()) { chName = event->getpath(); }
-  // If none of the is present just return and ignore the message.
-  else                           { return; }
-
-  SSEChannel *ch = GetChannel(chName);
-
-  if (ch == NULL) {
-    if (!_config->GetValueBool("server.allowUndefinedChannels")) {
-        LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
-        delete(event);
-        return;
-    }
-
-    ch = new SSEChannel(_config->GetDefaultChannelConfig(), chName);
-    _channels.push_back(SSEChannelPtr(ch));
-  }
-
-  ch->BroadcastEvent(event);
-}
-
-void SSEServer::Broadcast(SSEEvent& event, const string targetChannel) {
+bool SSEServer::Broadcast(SSEEvent& event) {
   SSEChannel* ch;
-  const string& chName = targetChannel.empty() ? event.getpath() : targetChannel;
+  const string& chName = event.getpath();
 
-  if (chName.empty()) { return; }
-
+  if (chName.empty()) { return false; }
+  
   ch = GetChannel(chName);
-
   if (ch == NULL) {
     if (!_config->GetValueBool("server.allowUndefinedChannels")) {
         LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
-        return;
+        return false;
     }
 
     ch = new SSEChannel(_config->GetDefaultChannelConfig(), chName);
@@ -89,20 +51,42 @@ void SSEServer::Broadcast(SSEEvent& event, const string targetChannel) {
   }
 
   ch->BroadcastEvent(&event);
+
+  return true;
 }
 
 void SSEServer::PostHandler(SSEClient* client) {
   HTTPRequest* req = client->GetHttpReq();
   SSEEvent event(req->GetPostData());
 
-  if (event.compile()) {
-    Broadcast(event);
-    HTTPResponse res(200);
+  SSEChannel* ch = GetChannel(req->GetPath().substr(1));;
+  if (ch == NULL) {
+   HTTPResponse res(404);
+   client->Send(res.Get());
+   return; 
+  }
+
+  event.setpath(req->GetPath().substr(1));
+
+  // Client unauthorized.
+  if (!ch->IsAllowedToPost(client)) {
+    HTTPResponse res(401);
     client->Send(res.Get());
-  } else {
+    return;
+  }
+ 
+  // Invalid format. 
+  if (!event.compile()) {
     HTTPResponse res(400);
     client->Send(res.Get());
-  }
+    return;
+  }  
+
+  Broadcast(event);
+  
+  // Event broadcasted OK.
+  HTTPResponse res(200);
+  client->Send(res.Get());
 }
 
 /**
@@ -112,7 +96,7 @@ void SSEServer::Run() {
   InitSocket();
 
   _datasource = boost::shared_ptr<SSEInputSource>(new AmqpInputSource());
-  _datasource->Init(this, boost::bind(&SSEServer::BroadcastCallback, this, _1));
+  _datasource->Init(this);
   _datasource->Run();
 
   InitChannels();

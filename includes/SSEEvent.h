@@ -18,14 +18,15 @@ class SSEEvent {
     const string get();
     const string getpath();
     const string getid();
+    void  setpath(const string path);
 
   private:
-    stringstream json_ss;
-    string event;
-    string path;
-    vector<string> data;
-    string id;
-    int retry;
+    stringstream _json_ss;
+    string _event;
+    string _path;
+    vector<string> _data;
+    string _id;
+    int _retry;
 };
 
 #endif

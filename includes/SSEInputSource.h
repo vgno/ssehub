@@ -9,13 +9,11 @@
 class SSEServer;
 class SSEConfig;
 
-typedef boost::function<void(std::string)> DataSourceCallback;
-
 class SSEInputSource {
   public:
     SSEInputSource();
     virtual ~SSEInputSource();
-    void Init(SSEServer* server, DataSourceCallback callback);
+    void Init(SSEServer* server);
     void Run();
     virtual void Start() {};
     void KillThread();
@@ -24,7 +22,6 @@ class SSEInputSource {
     SSEServer* _server;
     SSEConfig* _config;
     boost::thread _thread;
-    DataSourceCallback _callback;
 };
 
 #endif

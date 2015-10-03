@@ -352,3 +352,15 @@ const SSEChannelStats& SSEChannel::GetStats() {
   _stats.num_clients = GetNumClients();
   return _stats;
 }
+
+bool SSEChannel::IsAllowedToPost(SSEClient* client) {
+  BOOST_FOREACH(const iprange_t& range, _config.allowedPublishers) {
+    if ((client->GetSockAddr() & range.mask) == (range.range & range.mask)) {
+      DLOG(INFO) << "Allowing POST to " << _config.id << " from client " << client->GetIP();
+      return true;
+    }
+  }
+  
+  DLOG(INFO) << "Dissallowing POST to " << _config.id << " from client " << client->GetIP();
+  return false;
+}

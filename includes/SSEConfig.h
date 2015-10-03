@@ -2,16 +2,23 @@
 #define CONFIG_H
 #include <map>
 #include <string>
+#include <stdint.h>
 #include <boost/property_tree/ptree.hpp>
 
 using namespace std;
 
+typedef struct {
+  uint32_t range;
+  uint32_t mask;
+} iprange_t;
+
 struct ChannelConfig {
-  string              id;
-  class SSEConfig*    server;
-  std::vector<string> allowedOrigins;
-  string              cacheAdapter;
-  int                 cacheLength;
+  string                 id;
+  class SSEConfig*       server;
+  std::vector<string>    allowedOrigins;
+  std::vector<iprange_t> allowedPublishers;
+  string                 cacheAdapter;
+  int                    cacheLength;
 };
 
 typedef std::map<const std::string, std::string> ConfigMap_t;
