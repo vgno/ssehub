@@ -58,6 +58,10 @@ const std::string HTTPResponse::Get() {
   return ss.str();
 }
 
+/**
+ Translate a HTTP statuscode into a explanatory string.
+ @param statusCode statuscode to translate.
+**/
 const std::string HTTPResponse::GetStatusMsg(int statusCode) {
   switch (statusCode) {
     case 200: return "OK";

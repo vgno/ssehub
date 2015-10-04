@@ -55,18 +55,26 @@ bool SSEServer::Broadcast(SSEEvent& event) {
   return true;
 }
 
+/**
+ Handle POST requests.
+ @param client Pointer to SSEClient initiating the request.
+**/
 void SSEServer::PostHandler(SSEClient* client) {
   HTTPRequest* req = client->GetHttpReq();
   SSEEvent event(req->GetPostData());
 
-  SSEChannel* ch = GetChannel(req->GetPath().substr(1));;
+  const string& chName = req->GetPath().substr(1); 
+
+  // Check if channel exist.
+  SSEChannel* ch = GetChannel(chName);
   if (ch == NULL) {
    HTTPResponse res(404);
    client->Send(res.Get());
    return; 
   }
 
-  event.setpath(req->GetPath().substr(1));
+  // Set the event path to the endpoint we recieved the POST on.
+  event.setpath(chName);
 
   // Client unauthorized.
   if (!ch->IsAllowedToPublish(client)) {
@@ -82,6 +90,7 @@ void SSEServer::PostHandler(SSEClient* client) {
     return;
   }  
 
+  // Broacast the event.
   Broadcast(event);
   
   // Event broadcasted OK.
@@ -197,6 +206,8 @@ void SSEServer::AcceptLoop() {
       switch (errno) {
         case EMFILE:
           LOG(ERROR) << "All connections available used. Exiting.";
+          // As a safety measure exit when we have no more filehandles available on the system.
+          // This is a sign that something is wrong and we are better of handling it this way, atleast for now.
           exit(1);
         break;
 
@@ -284,6 +295,8 @@ void SSEServer::ClientRouterLoop() {
          stats.oversized_http_req++;
          continue;
 
+        case HTTP_REQ_OK: break;
+
         case HTTP_REQ_POST_INVALID_LENGTH:
           { HTTPResponse res(411, "", false); client->Send(res.Get()); }
           client->Destroy();
@@ -306,7 +319,6 @@ void SSEServer::ClientRouterLoop() {
           client->Destroy();
           continue;
 
-        case HTTP_REQ_OK: break;
       } 
 
       if (!req->GetPath().empty()) {

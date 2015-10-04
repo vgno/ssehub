@@ -5,12 +5,19 @@
 
 using namespace std;
 
+/**
+  Constructor.
+  @param config SSEChannelConfig.
+**/
 LevelDB::LevelDB(const ChannelConfig& config) : _config(config) {
   const string cachefile = _config.server->GetValue("leveldb.storageDir") + "/" + config.id + ".db";
   LOG(INFO) << "LevelDB storage file: " << cachefile;
   InitDB(cachefile);
 }
 
+/**
+ Destructor.
+*/
 LevelDB::~LevelDB() {
   leveldb_options_destroy(_options);
   leveldb_writeoptions_destroy(_woptions);
@@ -18,6 +25,9 @@ LevelDB::~LevelDB() {
   leveldb_close(_db);
 }
 
+/**
+ @param dbfile Path where we should create or load the database.
+**/
 void LevelDB::InitDB(const string& dbfile) {
   char* err = NULL;
 
@@ -36,6 +46,10 @@ void LevelDB::InitDB(const string& dbfile) {
   LOG(INFO) << "LevelDB::InitDB finished for " << _config.id;
 }
 
+/**
+ Add event to cache.
+ @patam event Pointer to SSEEvent to cache.
+**/
 void LevelDB::CacheEvent(SSEEvent* event) {
   char* err = NULL;
 
@@ -69,6 +83,10 @@ void LevelDB::CacheEvent(SSEEvent* event) {
   }
 }
 
+/**
+ Get a list of all events since a givend ID.
+ @param lastId ID of first event.
+**/
 deque<string> LevelDB::GetEventsSinceId(string lastId) {
   deque<string> events;
   leveldb_iterator_t* it;
@@ -94,6 +112,9 @@ deque<string> LevelDB::GetEventsSinceId(string lastId) {
   return events;
 }
 
+/**
+ Get a list of all events stored in the cache.
+**/
 deque<string> LevelDB::GetAllEvents() {
   deque<string> events;
   leveldb_iterator_t* it;
@@ -119,6 +140,9 @@ deque<string> LevelDB::GetAllEvents() {
   return events;
 }
 
+/**
+ Get number of events currently stored in the cache.
+**/
 int LevelDB::GetSizeOfCachedEvents() {
   leveldb_iterator_t* it;
   leveldb_readoptions_t* readopts;

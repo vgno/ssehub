@@ -96,34 +96,34 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
     LOG(FATAL) << "Failed to fetch default allowedOrigins from config: " << e.what();
   }
 
-  // Get default POST restrictions.
+  // Get default publish restrictions.
   try {
-   vector<string> RestrictPost;
-   GetArray(RestrictPost, pt.get_child("default.restrictPost"));
+   vector<string> RestrictPublish;
+   GetArray(RestrictPublish, pt.get_child("default.restrictPublish"));
 
-   BOOST_FOREACH(const std::string& range_str, RestrictPost) {
+   BOOST_FOREACH(const std::string& range_str, RestrictPublish) {
     string range, cidr;
     uint32_t mask;
     struct in_addr range_in;
     iprange_t iprange;
 
     size_t cidr_start = range_str.find("/");
-    LOG_IF(FATAL, cidr_start == string::npos) << "restrictPost: Invalid IP range " << range_str;
+    LOG_IF(FATAL, cidr_start == string::npos) << "restrictPublish: Invalid IP range " << range_str;
 
     range.insert(0, range_str, 0, cidr_start);
     cidr.insert(0, range_str, cidr_start + 1, string::npos);
     mask = (~0U) << (32-(boost::lexical_cast<int>(cidr)));
 
-    LOG_IF(FATAL, inet_aton(range.c_str(), &range_in) == 0) << "restrictPost Invalid IP " << range;
+    LOG_IF(FATAL, inet_aton(range.c_str(), &range_in) == 0) << "restrictPublish Invalid IP " << range;
     
-    DLOG(INFO) << "restrictPost allow " << range << "/" << cidr;
+    DLOG(INFO) << "restrictPublish allow " << range << "/" << cidr;
     iprange.range = range_in.s_addr;
     iprange.mask = mask;
 
     DefaultChannelConfig.allowedPublishers.push_back(iprange);
    }
   } catch(std::exception &e) {
-    LOG(FATAL) << "Error parsing restrictPost entry in config: " << e.what();
+    LOG(FATAL) << "Error parsing restrictPublish entry in config: " << e.what();
   }
 
   // Populate ChannelMap.
@@ -148,6 +148,7 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
       ChannelMap[chName].allowedOrigins = DefaultAllowedOrigins;
     }
 
+    // Add list of allowed publishers.
     ChannelMap[chName].allowedPublishers = DefaultChannelConfig.allowedPublishers;
 
     // Optional channel parameters.
@@ -161,6 +162,11 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
   }
 }
 
+/**
+ Get an array from a config item.
+ @param target Reference to array to populate with the result.
+ @param pt Reference to ptree to read from.
+**/
 void SSEConfig::GetArray(vector<std::string>& target, boost::property_tree::ptree& pt) {
   BOOST_FOREACH(boost::property_tree::ptree::value_type& child, pt) {
     target.push_back(child.second.get_value<std::string>());

@@ -26,7 +26,7 @@
     "cacheAdapter": "leveldb",
     "cacheLength": 500,
     "allowedOrigins":  "*",
-    "restrictPost": [ 
+    "restrictPublish": [
       "127.0.0.1/32",
       "10.84.0.0/16"
     ]
