@@ -62,12 +62,12 @@ const std::string HTTPResponse::GetStatusMsg(int statusCode) {
   switch (statusCode) {
     case 200: return "OK";
     case 100: return "Continue";
-    case 400: return "Bad Request.";
-    case 401: return "Unauthorized.";
-    case 403: return "Forbidden.";
-    case 404: return "Not Found.";
-    case 411: return "Length Required.";
-    case 413: return "Request Entity Too Large.";
+    case 400: return "Bad Request";
+    case 401: return "Unauthorized";
+    case 403: return "Forbidden";
+    case 404: return "Not Found";
+    case 411: return "Length Required";
+    case 413: return "Request Entity Too Large";
   }
 
   return "OK";

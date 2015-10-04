@@ -353,14 +353,18 @@ const SSEChannelStats& SSEChannel::GetStats() {
   return _stats;
 }
 
-bool SSEChannel::IsAllowedToPost(SSEClient* client) {
+/**
+ Checks if a client is allowed to publish to a channel.
+ @param client Pointer to SSEClient to authorize.  
+**/
+bool SSEChannel::IsAllowedToPublish(SSEClient* client) {
   BOOST_FOREACH(const iprange_t& range, _config.allowedPublishers) {
     if ((client->GetSockAddr() & range.mask) == (range.range & range.mask)) {
-      DLOG(INFO) << "Allowing POST to " << _config.id << " from client " << client->GetIP();
+      DLOG(INFO) << "Allowing publish to " << _config.id << " from client " << client->GetIP();
       return true;
     }
   }
   
-  DLOG(INFO) << "Dissallowing POST to " << _config.id << " from client " << client->GetIP();
+  DLOG(INFO) << "Dissallowing publish to " << _config.id << " from client " << client->GetIP();
   return false;
 }

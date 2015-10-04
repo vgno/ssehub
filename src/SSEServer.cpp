@@ -69,7 +69,7 @@ void SSEServer::PostHandler(SSEClient* client) {
   event.setpath(req->GetPath().substr(1));
 
   // Client unauthorized.
-  if (!ch->IsAllowedToPost(client)) {
+  if (!ch->IsAllowedToPublish(client)) {
     HTTPResponse res(403);
     client->Send(res.Get());
     return;

@@ -53,7 +53,7 @@ class SSEChannel {
     void SendCache(SSEClient* client);
     const SSEChannelStats& GetStats();
     void AddClient(SSEClient* client, HTTPRequest* req);
-    bool IsAllowedToPost(SSEClient* client);
+    bool IsAllowedToPublish(SSEClient* client);
     ulong GetNumClients();
 
   private:
