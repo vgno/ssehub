@@ -70,7 +70,7 @@ void SSEServer::PostHandler(SSEClient* client) {
 
   // Client unauthorized.
   if (!ch->IsAllowedToPost(client)) {
-    HTTPResponse res(401);
+    HTTPResponse res(403);
     client->Send(res.Get());
     return;
   }
