@@ -53,7 +53,7 @@ class SSEServer {
     void ClientRouterLoop();
     void PostHandler(SSEClient* client);
     void InitChannels();
-    SSEChannel* GetChannel(const std::string id);
+    SSEChannel* GetChannel(const std::string id, bool create);
 };
 
 #endif

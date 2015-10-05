@@ -36,18 +36,11 @@ SSEServer::~SSEServer() {
 bool SSEServer::Broadcast(SSEEvent& event) {
   SSEChannel* ch;
   const string& chName = event.getpath();
-
-  if (chName.empty()) { return false; }
   
-  ch = GetChannel(chName);
+  ch = GetChannel(chName, _config->GetValueBool("server.allowUndefinedChannels"));
   if (ch == NULL) {
-    if (!_config->GetValueBool("server.allowUndefinedChannels")) {
-        LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
-        return false;
-    }
-
-    ch = new SSEChannel(_config->GetDefaultChannelConfig(), chName);
-    _channels.push_back(SSEChannelPtr(ch));
+    LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
+    return false;
   }
 
   ch->BroadcastEvent(&event);
@@ -66,7 +59,7 @@ void SSEServer::PostHandler(SSEClient* client) {
   const string& chName = req->GetPath().substr(1); 
 
   // Check if channel exist.
-  SSEChannel* ch = GetChannel(chName);
+  SSEChannel* ch = GetChannel(chName, _config->GetValueBool("server.allowUndefinedChannels"));
   if (ch == NULL) {
    HTTPResponse res(404);
    client->Send(res.Get());
@@ -159,8 +152,9 @@ void SSEServer::InitChannels() {
   Get instance pointer to SSEChannel object from id if it exists.
   @param The id/path of the channel you want to get a instance pointer to.
 */
-SSEChannel* SSEServer::GetChannel(const string id) {
+SSEChannel* SSEServer::GetChannel(const string id, bool create=false) {
   SSEChannelList::iterator it;
+  SSEChannel* ch = NULL;
 
   for (it = _channels.begin(); it != _channels.end(); it++) {
     SSEChannel* chan = static_cast<SSEChannel*>((*it).get());
@@ -169,7 +163,12 @@ SSEChannel* SSEServer::GetChannel(const string id) {
     }
   }
 
-  return NULL;
+  if (create) {
+    ch = new SSEChannel(_config->GetDefaultChannelConfig(), id);
+    _channels.push_back(SSEChannelPtr(ch));
+  }
+
+  return ch;
 }
 
 /**
