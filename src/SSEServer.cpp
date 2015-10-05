@@ -59,7 +59,9 @@ void SSEServer::PostHandler(SSEClient* client) {
   const string& chName = req->GetPath().substr(1); 
 
   // Check if channel exist.
-  SSEChannel* ch = GetChannel(chName, _config->GetValueBool("server.allowUndefinedChannels"));
+  SSEChannel* ch = GetChannel(chName, 
+      _config->GetValueBool("server.allowUndefinedChannels"));
+
   if (ch == NULL) {
    HTTPResponse res(404);
    client->Send(res.Get());
@@ -323,7 +325,7 @@ void SSEServer::ClientRouterLoop() {
       if (!req->GetPath().empty()) {
         // Handle /stats endpoint.
         if (req->GetPath().compare("/stats") == 0) {
-          boost::thread(&SSEStatsHandler::SendToClient, stats, client);
+          stats.SendToClient(client);
           continue;
         }
 
