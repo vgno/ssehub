@@ -25,11 +25,7 @@
   "default": {
     "cacheAdapter": "leveldb",
     "cacheLength": 500,
-    "allowedOrigins":  "*",
-    "restrictPublish": [
-      "127.0.0.1/32",
-      "10.84.0.0/16"
-    ]
+    "allowedOrigins":  "*"
   },
   "channels": [
     {
@@ -39,7 +35,10 @@
     },
     {
         "path": "test2",
-        "cacheAdapter": "leveldb"
+        "cacheAdapter": "leveldb",
+        "restrictPublish": [
+         "127.0.0.1/32"
+        ]
     }
   ]
 }

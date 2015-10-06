@@ -358,9 +358,11 @@ const SSEChannelStats& SSEChannel::GetStats() {
  @param client Pointer to SSEClient to authorize.  
 **/
 bool SSEChannel::IsAllowedToPublish(SSEClient* client) {
+  if (_config.allowedPublishers.size() < 1) return true;
+
   BOOST_FOREACH(const iprange_t& range, _config.allowedPublishers) {
-    if ((ntohl(client->GetSockAddr()) & range.mask) == (range.range & range.mask)) {
-      DLOG(INFO) << "Allowing publish to " << _config.id << " from client " << client->GetIP();
+    if ((client->GetSockAddr() & range.mask) == (range.range & range.mask)) {
+      LOG(INFO) << "Allowing publish to " << _config.id << " from client " << client->GetIP();
       return true;
     }
   }

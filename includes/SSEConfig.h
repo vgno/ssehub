@@ -38,6 +38,7 @@ class SSEConfig {
     void InitDefaults();
     void GetArray(vector<std::string>& target, boost::property_tree::ptree& pt);
     void LoadChannels(boost::property_tree::ptree& pt);
+    void GetAllowedPublishers(ChannelConfig& conf, boost::property_tree::ptree& pt);
     ConfigMap_t ConfigMap;
     ChannelMap_t ChannelMap;
     ChannelConfig DefaultChannelConfig;
