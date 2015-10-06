@@ -114,13 +114,12 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
     cidr.insert(0, range_str, cidr_start + 1, string::npos);
 
     mask = (~0U) << (32-(boost::lexical_cast<int>(cidr)));
-    mask = ntohl(mask);
 
     LOG_IF(FATAL, inet_aton(range.c_str(), &range_in) == 0) << "restrictPublish Invalid IP " << range;
     
     DLOG(INFO) << "restrictPublish allow " << range << "/" << cidr;
-    iprange.range = range_in.s_addr;
-    iprange.mask = mask;
+    iprange.range = ntohl(range_in.s_addr);
+    iprange.mask = ntohl(mask);
 
     DefaultChannelConfig.allowedPublishers.push_back(iprange);
    }

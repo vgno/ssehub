@@ -359,7 +359,7 @@ const SSEChannelStats& SSEChannel::GetStats() {
 **/
 bool SSEChannel::IsAllowedToPublish(SSEClient* client) {
   BOOST_FOREACH(const iprange_t& range, _config.allowedPublishers) {
-    if ((client->GetSockAddr() & range.mask) == (range.range & range.mask)) {
+    if ((ntohl(client->GetSockAddr()) & range.mask) == (range.range & range.mask)) {
       DLOG(INFO) << "Allowing publish to " << _config.id << " from client " << client->GetIP();
       return true;
     }
