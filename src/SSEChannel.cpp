@@ -157,18 +157,17 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   // Send CORS headers.
   SetCorsHeaders(req, res);
 
-  // Disallow every other method than GET.
-  if (req->GetMethod().compare("GET") != 0) {
-    DLOG(INFO) << "Method: " << req->GetMethod();
-    res.SetStatus(405, "Method Not Allowed");
+   // Reply with CORS headers when we get a OPTIONS request.
+  if (req->GetMethod().compare("OPTIONS") == 0) {
     client->Send(res.Get());
     client->Destroy();
     return;
   }
 
-  // Reply with CORS headers when we get a OPTIONS request.
-  if (req->GetMethod().compare("OPTIONS") == 0) {
-    res.SetHeader("Access-Control-Allow-Origin", "*");
+  // Disallow every other method than GET.
+  if (req->GetMethod().compare("GET") != 0) {
+    DLOG(INFO) << "Method: " << req->GetMethod();
+    res.SetStatus(405, "Method Not Allowed");
     client->Send(res.Get());
     client->Destroy();
     return;

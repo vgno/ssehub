@@ -51,9 +51,9 @@ bool SSEServer::Broadcast(SSEEvent& event) {
 /**
  Handle POST requests.
  @param client Pointer to SSEClient initiating the request.
-**/
-void SSEServer::PostHandler(SSEClient* client) {
-  HTTPRequest* req = client->GetHttpReq();
+ @param req Pointer to HTTPRequest.
+ **/
+void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
   SSEEvent event(req->GetPostData());
 
   const string& chName = req->GetPath().substr(1); 
@@ -208,7 +208,7 @@ void SSEServer::AcceptLoop() {
         case EMFILE:
           LOG(ERROR) << "All connections available used. Exiting.";
           // As a safety measure exit when we have no more filehandles available on the system.
-          // This is a sign that something is wrong and we are better of handling it this way, atleast for now.
+          // This is a sign that something is wrong and we are better off handling it this way, atleast for now.
           exit(1);
         break;
 
@@ -316,10 +316,9 @@ void SSEServer::ClientRouterLoop() {
         case HTTP_REQ_POST_INCOMPLETE: continue;
 
         case HTTP_REQ_POST_OK:
-          PostHandler(client);
+          PostHandler(client, req);
           client->Destroy();
           continue;
-
       } 
 
       if (!req->GetPath().empty()) {
@@ -330,13 +329,13 @@ void SSEServer::ClientRouterLoop() {
         }
 
         string chName = req->GetPath().substr(1);
-        DLOG(INFO) << "CHANNEL:" << chName << ".";
-
-        // substr(1) to remove the /.
         SSEChannel *ch = GetChannel(chName);
+
+        DLOG(INFO) << "Channel: " << chName;
+
         if (ch != NULL) {
-          ch->AddClient(client, req);
           epoll_ctl(_efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
+          ch->AddClient(client, req);
         } else {
           HTTPResponse res;
           res.SetBody("Channel does not exist.\n");

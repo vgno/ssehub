@@ -25,6 +25,7 @@ extern int stop;
 class SSEConfig;
 class SSEChannel;
 class SSEInputSource;
+class HTTPRequest;
 
 typedef std::vector<boost::shared_ptr<SSEChannel> > SSEChannelList;
 
@@ -51,7 +52,7 @@ class SSEServer {
     void InitSocket();
     void AcceptLoop();
     void ClientRouterLoop();
-    void PostHandler(SSEClient* client);
+    void PostHandler(SSEClient* client, HTTPRequest* req);
     void InitChannels();
     SSEChannel* GetChannel(const std::string id, bool create);
 };

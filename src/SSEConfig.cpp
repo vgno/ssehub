@@ -88,7 +88,6 @@ void SSEConfig::GetAllowedPublishers(ChannelConfig& conf, boost::property_tree::
   vector<string> RestrictPublish;
   GetArray(RestrictPublish, pt.get_child("restrictPublish"));
 
-  // Get default publish restrictions.
   try {
    BOOST_FOREACH(const std::string& range_str, RestrictPublish) {
     struct in_addr range_in;
@@ -159,8 +158,8 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
       ChannelMap[chName].allowedOrigins = DefaultAllowedOrigins;
     }
 
+    // Add list of allowed publishers for the current channel.
     try {
-      // Add list of allowed publishers.
       GetAllowedPublishers(ChannelMap[chName], child.second);
     } catch(...) {
       ChannelMap[chName].allowedPublishers = DefaultChannelConfig.allowedPublishers;
