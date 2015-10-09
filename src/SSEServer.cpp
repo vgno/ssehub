@@ -58,6 +58,13 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
 
   const string& chName = req->GetPath().substr(1); 
 
+  // Invalid format.
+  if (!event.compile()) {
+    HTTPResponse res(400);
+    client->Send(res.Get());
+    return;
+  }
+
   // Check if channel exist.
   SSEChannel* ch = GetChannel(chName, 
       _config->GetValueBool("server.allowUndefinedChannels"));
@@ -78,13 +85,6 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
     return;
   }
  
-  // Invalid format. 
-  if (!event.compile()) {
-    HTTPResponse res(400);
-    client->Send(res.Get());
-    return;
-  }  
-
   // Broacast the event.
   Broadcast(event);
   
