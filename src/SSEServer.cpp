@@ -58,6 +58,9 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
 
   const string& chName = req->GetPath().substr(1); 
 
+  // Set the event path to the endpoint we recieved the POST on.
+  event.setpath(chName);
+
   // Invalid format.
   if (!event.compile()) {
     HTTPResponse res(400);
@@ -74,9 +77,6 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
    client->Send(res.Get());
    return; 
   }
-
-  // Set the event path to the endpoint we recieved the POST on.
-  event.setpath(chName);
 
   // Client unauthorized.
   if (!ch->IsAllowedToPublish(client)) {
