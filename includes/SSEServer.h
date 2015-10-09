@@ -54,6 +54,7 @@ class SSEServer {
     void ClientRouterLoop();
     void PostHandler(SSEClient* client, HTTPRequest* req);
     void InitChannels();
+    void RemoveSocket(int fd);
     SSEChannel* GetChannel(const std::string id, bool create);
 };
 
