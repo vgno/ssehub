@@ -351,21 +351,3 @@ const SSEChannelStats& SSEChannel::GetStats() {
   _stats.num_clients = GetNumClients();
   return _stats;
 }
-
-/**
- Checks if a client is allowed to publish to a channel.
- @param client Pointer to SSEClient to authorize.  
-**/
-bool SSEChannel::IsAllowedToPublish(SSEClient* client) {
-  if (_config.allowedPublishers.size() < 1) return true;
-
-  BOOST_FOREACH(const iprange_t& range, _config.allowedPublishers) {
-    if ((client->GetSockAddr() & range.mask) == (range.range & range.mask)) {
-      LOG(INFO) << "Allowing publish to " << _config.id << " from client " << client->GetIP();
-      return true;
-    }
-  }
-  
-  DLOG(INFO) << "Dissallowing publish to " << _config.id << " from client " << client->GetIP();
-  return false;
-}

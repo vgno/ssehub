@@ -55,36 +55,52 @@ bool SSEServer::Broadcast(SSEEvent& event) {
  **/
 void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
   SSEEvent event(req->GetPostData());
-
+  bool validEvent = event.compile();
   const string& chName = req->GetPath().substr(1); 
 
   // Set the event path to the endpoint we recieved the POST on.
   event.setpath(chName);
 
-  // Invalid format.
-  if (!event.compile()) {
-    HTTPResponse res(400);
-    client->Send(res.Get());
-    return;
-  }
-
   // Check if channel exist.
-  SSEChannel* ch = GetChannel(chName, 
-      _config->GetValueBool("server.allowUndefinedChannels"));
+  SSEChannel* ch = GetChannel(chName);
 
   if (ch == NULL) {
-   HTTPResponse res(404);
-   client->Send(res.Get());
-   return; 
+    // Handle creation of new channels.
+    if (_config->GetValueBool("server.allowUndefinedChannels")) {
+      if (!_config->IsAllowedToPublish(client)) {
+        HTTPResponse res(403);
+        client->Send(res.Get());
+        return;
+      }
+
+      if (!validEvent) {
+        HTTPResponse res(400);
+        client->Send(res.Get());
+        return;
+      }
+
+      // Create the channel.
+      ch = GetChannel(chName, true);
+    } else {
+      HTTPResponse res(404);
+      client->Send(res.Get());
+      return;
+    }
+  } else {
+    // Handle existing channels.
+    if (!_config->IsAllowedToPublish(client, chName)) {
+      HTTPResponse res(403);
+      client->Send(res.Get());
+      return;
+    }
+    
+    if (!validEvent) {
+      HTTPResponse res(400);
+      client->Send(res.Get());
+      return;
+    }
   }
 
-  // Client unauthorized.
-  if (!ch->IsAllowedToPublish(client)) {
-    HTTPResponse res(403);
-    client->Send(res.Get());
-    return;
-  }
- 
   // Broacast the event.
   Broadcast(event);
   
@@ -154,7 +170,7 @@ void SSEServer::InitChannels() {
   Get instance pointer to SSEChannel object from id if it exists.
   @param The id/path of the channel you want to get a instance pointer to.
 */
-SSEChannel* SSEServer::GetChannel(const string id, bool create=false) {
+SSEChannel* SSEServer::GetChannel(const string id, bool create) {
   SSEChannelList::iterator it;
   SSEChannel* ch = NULL;
 

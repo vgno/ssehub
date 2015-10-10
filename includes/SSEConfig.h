@@ -4,6 +4,7 @@
 #include <string>
 #include <stdint.h>
 #include <boost/property_tree/ptree.hpp>
+#include "SSEClient.h"
 
 using namespace std;
 
@@ -33,6 +34,7 @@ class SSEConfig {
     bool GetValueBool(const string& key);
     ChannelMap_t& GetChannels();
     ChannelConfig& GetDefaultChannelConfig();
+    bool IsAllowedToPublish(SSEClient* client, const string& chName="");
 
   private:
     void InitDefaults();

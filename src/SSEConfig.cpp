@@ -229,3 +229,22 @@ ChannelMap_t& SSEConfig::GetChannels() {
 ChannelConfig& SSEConfig::GetDefaultChannelConfig() {
   return DefaultChannelConfig;
 }
+
+bool SSEConfig::IsAllowedToPublish(SSEClient* client, const string& chName) {
+  ChannelConfig& chConf = DefaultChannelConfig;
+
+  if (ChannelMap.find(chName) != ChannelMap.end()) {chConf = ChannelMap[chName]; } 
+  else if (!chName.empty()) { return false; }
+
+  if (chConf.allowedPublishers.size() < 1) return true;
+
+  BOOST_FOREACH(const iprange_t& range, chConf.allowedPublishers) {
+    if ((client->GetSockAddr() & range.mask) == (range.range & range.mask)) {
+      LOG(INFO) << "Allowing publish to " << chConf.id << " from client " << client->GetIP();
+      return true;
+    }
+  }
+  
+  DLOG(INFO) << "Dissallowing publish to " << chConf.id << " from client " << client->GetIP();
+  return false;
+}
