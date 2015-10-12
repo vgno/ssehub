@@ -27,7 +27,6 @@
     "cacheAdapter": "leveldb",
     "cacheLength": 500,
     "allowedOrigins":  "*",
-    "cacheAdapter": "leveldb",
     "restrictPublish": [
       "127.0.0.1"
     ]

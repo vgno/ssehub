@@ -70,7 +70,6 @@ There is also a Dockerfile you can use to build a docker image.
     "cacheAdapter": "leveldb",
     "cacheLength": 500,
     "allowedOrigins":  "*",
-    "cacheAdapter": "leveldb",
     "restrictPublish": [
       "127.0.0.1"
     ]
