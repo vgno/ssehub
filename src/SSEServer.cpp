@@ -273,11 +273,12 @@ void SSEServer::AcceptLoop() {
 
 
 /**
- Remove socket from epoll fd set.
- @param fd File descriptor to remove.
+ Removes  socket from epoll fd set and deletes SSEClient object.
+ @param client SSEClient to remove.
 **/
-void SSEServer::RemoveSocket(int fd) {
-  epoll_ctl(_efd, EPOLL_CTL_DEL, fd, NULL);
+void SSEServer::RemoveClient(SSEClient* client) {
+  epoll_ctl(_efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
+  client->Destroy();
 }
 
 /**
@@ -299,16 +300,14 @@ void SSEServer::ClientRouterLoop() {
       // Close socket if an error occurs.
       if (eventList[i].events & EPOLLERR) {
         DLOG(WARNING) << "Error occurred while reading data from client " << client->GetIP() << ".";
-        RemoveSocket(client->Getfd());
-        client->Destroy();
+        RemoveClient(client);
         stats.router_read_errors++;
         continue;
       }
 
       if ((eventList[i].events & EPOLLHUP) || (eventList[i].events & EPOLLRDHUP)) {
         DLOG(WARNING) << "Client " << client->GetIP() << " hung up in router thread.";
-        RemoveSocket(client->Getfd());
-        client->Destroy();
+        RemoveClient(client);
         continue;
       }
 
@@ -317,8 +316,7 @@ void SSEServer::ClientRouterLoop() {
 
       if (len <= 0) {
         stats.router_read_errors++;
-        RemoveSocket(client->Getfd());
-        client->Destroy();
+        RemoveClient(client);
         continue;
       }
 
@@ -332,14 +330,12 @@ void SSEServer::ClientRouterLoop() {
         case HTTP_REQ_INCOMPLETE: continue;
 
         case HTTP_REQ_FAILED:
-         RemoveSocket(client->Getfd());
-         client->Destroy();
+         RemoveClient(client);
          stats.invalid_http_req++;
          continue;
 
         case HTTP_REQ_TO_BIG:
-         RemoveSocket(client->Getfd());
-         client->Destroy();
+         RemoveClient(client);
          stats.oversized_http_req++;
          continue;
 
@@ -347,15 +343,13 @@ void SSEServer::ClientRouterLoop() {
 
         case HTTP_REQ_POST_INVALID_LENGTH:
           { HTTPResponse res(411, "", false); client->Send(res.Get()); }
-          RemoveSocket(client->Getfd());
-          client->Destroy();
+          RemoveClient(client);
           continue;
 
         case HTTP_REQ_POST_TOO_LARGE:
           DLOG(INFO) << "Client " <<  client->GetIP() << " sent too much POST data.";
           { HTTPResponse res(413, "", false); client->Send(res.Get()); }
-          RemoveSocket(client->Getfd());
-          client->Destroy();
+          RemoveClient(client);
           continue;
 
         case HTTP_REQ_POST_START:
@@ -365,9 +359,8 @@ void SSEServer::ClientRouterLoop() {
         case HTTP_REQ_POST_INCOMPLETE: continue;
 
         case HTTP_REQ_POST_OK:
-          RemoveSocket(client->Getfd());
           PostHandler(client, req);
-          client->Destroy();
+          RemoveClient(client);
           continue;
       } 
 
@@ -384,14 +377,13 @@ void SSEServer::ClientRouterLoop() {
         DLOG(INFO) << "Channel: " << chName;
 
         if (ch != NULL) {
-          RemoveSocket(client->Getfd());
+          epoll_ctl(_efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
           ch->AddClient(client, req);
         } else {
           HTTPResponse res;
           res.SetBody("Channel does not exist.\n");
           client->Send(res.Get());
-          RemoveSocket(client->Getfd());
-          client->Destroy();
+          RemoveClient(client);
         }
       }
     }
