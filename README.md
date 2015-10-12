@@ -69,7 +69,10 @@ There is also a Dockerfile you can use to build a docker image.
     {
         "path": "test",
         "allowedOrigins": ["https://some.host"],
-        "cacheLength": 50
+        "cacheLength": 50,
+        "restrictPublish": [
+          "127.0.0.1/32"
+        ]
     },
     {
         "path": "test2"
@@ -80,7 +83,10 @@ There is also a Dockerfile you can use to build a docker image.
 
 # Event format
 
-Currently we support RabbitMQ fanout queue as input source.
+Currently we support POST and RabbitMQ fanout queue as input source.
+For POST you can restrict access on per ip/subnet basis with the restrictPublish configuration directive.
+You can do this both globally in the default section of the config or per channel basis.
+
 Events should be sent in the following format:
 
 ```json
@@ -91,6 +97,19 @@ Events should be sent in the following format:
     "data": "My event data."
 }
 ```
+
+When using POST for publishing events the "path" element in the event is ignored and replaced with the channel/endpoint you are posting to.
+
+# Example using POST
+
+Publish event to channel "test" with curl:
+
+```
+curl -v -X POST -d '{ "id":1, "event": "message", "data": "Test message" }' http://127.0.0.1:8080/test
+```
+
+# Dynamic creation of channels
+If "allowUndefinedChannels" is set to true in the config the channel will be created when the first event is sent to the channel.
 
 # License
 

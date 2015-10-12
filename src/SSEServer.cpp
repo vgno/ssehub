@@ -33,6 +33,10 @@ SSEServer::~SSEServer() {
   close(_efd);
 }
 
+/**
+  Broadcasts event to channel.
+  @param event Reference to SSEEvent to broadcast.
+**/
 bool SSEServer::Broadcast(SSEEvent& event) {
   SSEChannel* ch;
   const string& chName = event.getpath();
@@ -48,6 +52,11 @@ bool SSEServer::Broadcast(SSEEvent& event) {
   return true;
 }
 
+/**
+  Checks if a client is allowed to publish to channel.
+  @param client Pointer to SSEClient.
+  @param chConf Reference to ChannelConfig object to check against.
+**/
 bool SSEServer::IsAllowedToPublish(SSEClient* client, const ChannelConfig& chConf) {
   if (chConf.allowedPublishers.size() < 1) return true;
 
@@ -270,7 +279,6 @@ void SSEServer::AcceptLoop() {
     }
   }
 }
-
 
 /**
  Removes  socket from epoll fd set and deletes SSEClient object.

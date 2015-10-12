@@ -69,9 +69,7 @@ class SSEChannel {
     char _evs_preamble_data[2052];
 
     void InitializeCache();
-
     void InitializeThreads();
-
     void CleanupMain();
     void CleanupThreads();
     void Ping();
