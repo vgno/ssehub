@@ -17,7 +17,8 @@ Performant SSE-server implementation written in C++ that supports multiple chann
 
 Install dependencies (using apt in this example):
 ```
-apt-get install g++ make libgoogle-glog-dev libboost-dev libboost-system-dev libboost-thread-dev librabbitmq-dev
+apt-get install g++ make libgoogle-glog-dev libboost-dev \
+libboost-system-dev libboost-thread-dev librabbitmq-dev
 ```
 
 Checkout sourcecode:
@@ -58,24 +59,33 @@ There is also a Dockerfile you can use to build a docker image.
   },
   "redis": {
     "host": "127.0.0.1",
-    "port": "6379"
+    "port": 6379,
+    "numConnections": 5
+  },
+  "leveldb": {
+    "storageDir": "/tmp"
   },
   "default": {
-    "cacheAdapter": "redis",
-    "cacheLength": 100,
-    "allowedOrigins":  "*"
+    "cacheAdapter": "leveldb",
+    "cacheLength": 500,
+    "allowedOrigins":  "*",
+    "cacheAdapter": "leveldb",
+    "restrictPublish": [
+      "127.0.0.1"
+    ]
   },
   "channels": [
     {
         "path": "test",
         "allowedOrigins": ["https://some.host"],
-        "cacheLength": 50,
-        "restrictPublish": [
-          "127.0.0.1/32"
-        ]
+        "cacheLength": 5
     },
     {
-        "path": "test2"
+        "path": "test2",
+        "cacheAdapter": "leveldb",
+        "restrictPublish": [
+         "10.0.0.0/8"
+        ]
     }
   ]
 }
@@ -84,7 +94,7 @@ There is also a Dockerfile you can use to build a docker image.
 # Event format
 
 Currently we support POST and RabbitMQ fanout queue as input source.
-For POST you can restrict access on per ip/subnet basis with the restrictPublish configuration directive.
+For POST you can restrict access on ip/subnet basis with the restrictPublish configuration directive.
 You can do this both globally in the default section of the config or per channel basis.
 
 Events should be sent in the following format:
@@ -102,14 +112,15 @@ When using POST for publishing events the "path" element in the event is ignored
 
 # Example using POST
 
-Publish event to channel "test" with curl:
+Publish event to channel **test** with curl:
 
 ```
-curl -v -X POST -d '{ "id":1, "event": "message", "data": "Test message" }' http://127.0.0.1:8080/test
+curl -v -X POST http://127.0.0.1:8080/test \
+-d '{ "id":1, "event": "message", "data": "Test message" }'
 ```
 
 # Dynamic creation of channels
-If "allowUndefinedChannels" is set to true in the config the channel will be created when the first event is sent to the channel.
+If ```allowUndefinedChannels``` is set to true in the config the channel will be created when the first event is sent to the channel.
 
 # License
 
