@@ -17,7 +17,7 @@ Performant SSE-server implementation written in C++ that supports multiple chann
 
 Install dependencies (using apt in this example):
 ```
-apt-get install g++ make libgoogle-glog-dev libboost-dev \
+apt-get install g++ make libgoogle-glog-dev libboost-dev libleveldb-dev \
 libboost-system-dev libboost-thread-dev librabbitmq-dev
 ```
 
