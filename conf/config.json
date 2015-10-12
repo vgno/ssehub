@@ -39,7 +39,7 @@
     },
     {
         "path": "test2",
-        "cacheAdapter": "leveldb",
+        "cacheAdapter": "memory",
         "restrictPublish": [
          "10.0.0.0/8"
         ]

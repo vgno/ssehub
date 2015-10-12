@@ -82,7 +82,7 @@ There is also a Dockerfile you can use to build a docker image.
     },
     {
         "path": "test2",
-        "cacheAdapter": "leveldb",
+        "cacheAdapter": "memory",
         "restrictPublish": [
          "10.0.0.0/8"
         ]
