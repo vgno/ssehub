@@ -48,6 +48,20 @@ bool SSEServer::Broadcast(SSEEvent& event) {
   return true;
 }
 
+bool SSEServer::IsAllowedToPublish(SSEClient* client, const ChannelConfig& chConf) {
+  if (chConf.allowedPublishers.size() < 1) return true;
+
+  BOOST_FOREACH(const iprange_t& range, chConf.allowedPublishers) {
+    if ((client->GetSockAddr() & range.mask) == (range.range & range.mask)) {
+      LOG(INFO) << "Allowing publish to " << chConf.id << " from client " << client->GetIP();
+      return true;
+    }
+  }
+
+  DLOG(INFO) << "Dissallowing publish to " << chConf.id << " from client " << client->GetIP();
+  return false;
+}
+
 /**
  Handle POST requests.
  @param client Pointer to SSEClient initiating the request.
@@ -55,11 +69,14 @@ bool SSEServer::Broadcast(SSEEvent& event) {
  **/
 void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
   SSEEvent event(req->GetPostData());
-  bool validEvent = event.compile();
+  bool validEvent;
   const string& chName = req->GetPath().substr(1); 
 
   // Set the event path to the endpoint we recieved the POST on.
   event.setpath(chName);
+
+  // Validate the event.
+  validEvent = event.compile();
 
   // Check if channel exist.
   SSEChannel* ch = GetChannel(chName);
@@ -67,7 +84,7 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
   if (ch == NULL) {
     // Handle creation of new channels.
     if (_config->GetValueBool("server.allowUndefinedChannels")) {
-      if (!_config->IsAllowedToPublish(client)) {
+      if (!IsAllowedToPublish(client, _config->GetDefaultChannelConfig())) {
         HTTPResponse res(403);
         client->Send(res.Get());
         return;
@@ -88,7 +105,7 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
     }
   } else {
     // Handle existing channels.
-    if (!_config->IsAllowedToPublish(client, chName)) {
+    if (!IsAllowedToPublish(client, ch->GetConfig())) {
       HTTPResponse res(403);
       client->Send(res.Get());
       return;

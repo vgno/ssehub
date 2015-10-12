@@ -351,3 +351,10 @@ const SSEChannelStats& SSEChannel::GetStats() {
   _stats.num_clients = GetNumClients();
   return _stats;
 }
+
+/**
+  Returns the ChannelConfig.
+**/
+const ChannelConfig& SSEChannel::GetConfig() {
+  return _config;
+}

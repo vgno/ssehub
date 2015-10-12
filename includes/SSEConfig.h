@@ -34,7 +34,6 @@ class SSEConfig {
     bool GetValueBool(const string& key);
     ChannelMap_t& GetChannels();
     ChannelConfig& GetDefaultChannelConfig();
-    bool IsAllowedToPublish(SSEClient* client, const string& chName="");
 
   private:
     void InitDefaults();
