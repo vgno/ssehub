@@ -116,7 +116,7 @@ Publish event to channel **test** with curl:
 
 ```
 curl -v -X POST http://127.0.0.1:8080/test \
--d '{ "id":1, "event": "message", "data": "Test message" }'
+-d '{ "id": 1, "event": "message", "data": "Test message" }'
 ```
 
 # Dynamic creation of channels
