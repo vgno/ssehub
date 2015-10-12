@@ -33,6 +33,7 @@ void SSEConfig::InitDefaults() {
  ConfigMap["server.threadsPerChannel"]        = "5";
  ConfigMap["server.allowUndefinedChannels"]   = "true";
 
+ ConfigMap["amqp.enabled"]                    = "false";
  ConfigMap["amqp.host"]                       = "127.0.0.1";
  ConfigMap["amqp.port"]                       = "5672";
  ConfigMap["amqp.user"]                       = "guest";

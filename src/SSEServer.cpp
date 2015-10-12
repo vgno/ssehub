@@ -141,9 +141,11 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
 void SSEServer::Run() {
   InitSocket();
 
-  _datasource = boost::shared_ptr<SSEInputSource>(new AmqpInputSource());
-  _datasource->Init(this);
-  _datasource->Run();
+  if (_config->GetValueBool("amqp.enabled")) {
+      _datasource = boost::shared_ptr<SSEInputSource>(new AmqpInputSource());
+      _datasource->Init(this);
+      _datasource->Run();
+  }
 
   InitChannels();
 
