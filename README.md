@@ -3,7 +3,7 @@ SSEHub (Server-Sent Events streaming server)
 
 High performance SSE-server implementation written in C++.
 
-# Key features
+# Features
 
   - Supports multiple channels both staticly and dynamically-on-the-fly configured.
   - Configurable history cache that can be requested by clients upon reconnect using lastEventId.
