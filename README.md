@@ -28,7 +28,6 @@ git clone git@github.com:vgno/ssehub.git
 
 # Compile:
 cd ssehub && make
-```
 
 # Run:
 ./ssehub --config path/to/config.json (will use ./conf/config.json as default).
