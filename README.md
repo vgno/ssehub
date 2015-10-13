@@ -24,22 +24,28 @@ apt-get install g++ make libgoogle-glog-dev libboost-dev libleveldb-dev \
 libboost-system-dev libboost-thread-dev librabbitmq-dev
 ```
 
-#### Checkout sourcecode:
+**Checkout sourcecode:**
 ```
 git clone git@github.com:vgno/ssehub.git
 ```
 
-#### Compile:
+**Compile:**
 ```
 cd ssehub && make
 ```
 
-#### Run:
+**Run:**
 ```
 ./ssehub --config path/to/config.json (will use ./conf/config.json as default).
 ```
 
-There is also a Dockerfile you can use to build a docker image.
+#### Building docker image
+There is also a Dockerfile you can use to build a docker image
+To build issue the following command within the project root directory:
+
+```
+docker build -t ssehub .
+```
 
 # Example configuration
 
@@ -139,8 +145,8 @@ Stores events in  memory for fast access and also persists them to disk.
 #### Redis
 Stores events in Redis which also makes this store distributed and usable by multiple instances of ssehub.
 
-To request all events since a certain ID ise the query parameter `lastEventId=<id>` or header `Last-Event-ID: <id>`.
-You can also request the entire cache for the channel by using query parameter `getallcache=1`.
+To request all events since a certain ID use the query parameter `lastEventId=<id>` or header `Last-Event-ID: <id>`.
+You can also request the entire cache for a channel by using query parameter `getallcache=1`.
 
 # License
 
