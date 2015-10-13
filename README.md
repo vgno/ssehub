@@ -133,7 +133,7 @@ curl -v -X POST http://127.0.0.1:8080/test \
 # Dynamic creation of channels
 If `allowUndefinedChannels` is set to true in the config the channel will be created when the first event is sent to the channel.
 
-# Cache adapters.
+# Cache adapters
 
 #### Memory
 Stores events in memory, but is not persistent.
@@ -144,7 +144,8 @@ Stores events in  memory for fast access and also persists them to disk.
 
 #### Redis
 Stores events in Redis which also makes this store distributed and usable by multiple instances of ssehub.
-
+<br>
+<br>
 To request all events since a certain ID use the query parameter `lastEventId=<id>` or header `Last-Event-ID: <id>`.
 You can also request the entire cache for a channel by using query parameter `getallcache=1`.
 
