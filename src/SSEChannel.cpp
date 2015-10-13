@@ -56,7 +56,6 @@ SSEChannel::SSEChannel(ChannelConfig conf, string id) {
   _evs_preamble_data[2051] = '\0';
 
   InitializeCache();
-
   InitializeThreads();
 }
 
@@ -199,7 +198,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   
   client->DeleteHttpReq();
 
-  ev.events   = EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR | EPOLLET;
+  ev.events   = EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR;
   ev.data.ptr = client;
   ret = epoll_ctl(_efd, EPOLL_CTL_ADD, client->Getfd(), &ev);
 

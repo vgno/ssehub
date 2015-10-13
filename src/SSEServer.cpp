@@ -250,10 +250,8 @@ void SSEServer::AcceptLoop() {
     if (tmpfd == -1) {
       switch (errno) {
         case EMFILE:
-          LOG(ERROR) << "All connections available used. Exiting.";
-          // As a safety measure exit when we have no more filehandles available on the system.
-          // This is a sign that something is wrong and we are better off handling it this way, atleast for now.
-          exit(1);
+          LOG(ERROR) << "All connections available used. Cannot accept more connections.";
+          usleep(100000);
         break;
 
         default:
