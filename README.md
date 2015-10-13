@@ -18,23 +18,23 @@ High performance SSE-server implementation written in C++.
 
 # Building and running
 
-***Install dependencies (using apt in this example):***
+**Install dependencies (using apt in this example):**
 ```
 apt-get install g++ make libgoogle-glog-dev libboost-dev libleveldb-dev \
 libboost-system-dev libboost-thread-dev librabbitmq-dev
 ```
 
-***Checkout sourcecode:***
+**Checkout sourcecode:**
 ```
 git clone git@github.com:vgno/ssehub.git
 ```
 
-***Compile:***
+**Compile:**
 ```
 cd ssehub && make
 ```
 
-***Run:***
+**Run:**
 ```
 ./ssehub --config path/to/config.json (will use ./conf/config.json as default).
 ```
@@ -119,7 +119,7 @@ Events should be sent in the following format:
 
 The `id` and `event` fields is optional, but only events with a defined `id` will be cached.
 
-When using POST for publishing events the "path" element in the event is ignored and replaced with the channel/endpoint you are posting to.
+When using POST for publishing events the `path` element in the event is ignored and replaced with the channel/endpoint you are posting to.
 
 # Example using POST
 
