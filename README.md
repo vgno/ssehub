@@ -1,7 +1,7 @@
 SSEHub (Server-Sent Events streaming server)
 ============================================
 
-Performant SSE-server implementation written in C++ that supports multiple channels and high traffic loads.
+High performance SSE-server implementation written in C++.
 
 # Key features
 
@@ -9,29 +9,32 @@ Performant SSE-server implementation written in C++ that supports multiple chann
   - Configurable history cache that can be requested by clients upon reconnect using lastEventId.
   - Configurable "keep-alive" pings.
   - CORS support.
-  - RabbitMQ as input source.
+  - RabbitMQ input source.
+  - HTTP POST support to publish event.
+  - Access control for publishers.
   - Polyfill client support.
+  - Multiple storage adapters for cache.
   - Statistics endpoint (/stats).
 
 # Building and running
 
-Install dependencies (using apt in this example):
+#### Install dependencies (using apt in this example):
 ```
 apt-get install g++ make libgoogle-glog-dev libboost-dev libleveldb-dev \
 libboost-system-dev libboost-thread-dev librabbitmq-dev
 ```
 
-Checkout sourcecode:
+#### Checkout sourcecode:
 ```
 git clone git@github.com:vgno/ssehub.git
 ```
 
-Compile:
+#### Compile:
 ```
 cd ssehub && make
 ```
 
-Run:
+#### Run:
 ```
 ./ssehub --config path/to/config.json (will use ./conf/config.json as default).
 ```
@@ -108,6 +111,8 @@ Events should be sent in the following format:
 }
 ```
 
+The `id` and `event` fields is optional, but only events with a defined `id` will be cached.
+
 When using POST for publishing events the "path" element in the event is ignored and replaced with the channel/endpoint you are posting to.
 
 # Example using POST
@@ -120,7 +125,22 @@ curl -v -X POST http://127.0.0.1:8080/test \
 ```
 
 # Dynamic creation of channels
-If ```allowUndefinedChannels``` is set to true in the config the channel will be created when the first event is sent to the channel.
+If `allowUndefinedChannels` is set to true in the config the channel will be created when the first event is sent to the channel.
+
+# Cache adapters.
+
+#### Memory
+Stores events in memory, but is not persistent.
+Events will only be persisted througout the liftetime of the process.
+
+#### LevelDB
+Stores events in  memory for fast access and also persists them to disk.
+
+#### Redis
+Stores events in Redis which also makes this store distributed and usable by multiple instances of ssehub.
+
+To request all events since a certain ID ise the query parameter `lastEventId=<id>` or header `Last-Event-ID: <id>`.
+You can also request the entire cache for the channel by using query parameter `getallcache=1`.
 
 # License
 
