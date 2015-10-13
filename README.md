@@ -40,7 +40,7 @@ cd ssehub && make
 ```
 
 #### Building docker image
-There is also a Dockerfile you can use to build a docker image.__
+There is also a Dockerfile you can use to build a docker image.<br/>
 To build issue the following command within the project root directory:
 
 ```
