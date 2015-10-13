@@ -18,7 +18,7 @@ High performance SSE-server implementation written in C++.
 
 # Building and running
 
-#### Install dependencies (using apt in this example):
+***Install dependencies (using apt in this example):***
 ```
 apt-get install g++ make libgoogle-glog-dev libboost-dev libleveldb-dev \
 libboost-system-dev libboost-thread-dev librabbitmq-dev
