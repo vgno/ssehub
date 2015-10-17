@@ -11,12 +11,12 @@ typedef boost::shared_ptr<RedisSyncClient> RedisSyncClientPtr;
 
 class Redis : public CacheInterface {
   public:
-    Redis(string key, ChannelConfig config);
+    Redis(const string key, const ChannelConfig& config);
     void CacheEvent(SSEEvent* event);
     deque<string> GetEventsSinceId(string lastId);
     deque<string> GetAllEvents();
     int GetSizeOfCachedEvents();
-    ChannelConfig _config;
+    const ChannelConfig& _config;
 
   private:
     void Connect();
@@ -26,7 +26,7 @@ class Redis : public CacheInterface {
     RedisSyncClient* GetClient();
     string Lookup(string hostname);
     deque<RedisSyncClientPtr> _clients;
-    string _key;
+    const string _key;
     deque<RedisSyncClientPtr>::iterator _curclient;
 };
 #endif

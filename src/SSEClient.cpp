@@ -22,6 +22,15 @@ SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   // Set TCP_NODELAY on socket.
   int flag = 1;
   setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
+  
+  // Set KEEPALIVE on socket.
+  setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char*)&flag, sizeof(int));
+
+  // If we have TCP_USER_TIMEOUT set it to 10 seconds.
+  #ifdef TCP_USER_TIMEOUT
+  int timeout = 10000;
+  setsockopt (fd, SOL_TCP, TCP_USER_TIMEOUT, (char*) &timeout, sizeof (timeout));
+  #endif
 }
 
 /**
@@ -72,6 +81,10 @@ const string SSEClient::GetIP() {
   inet_ntop(AF_INET, &_csin.sin_addr, (char*)&ip, 32);
 
   return ip;
+}
+
+uint32_t SSEClient::GetSockAddr() {
+  return _csin.sin_addr.s_addr;
 }
 
 HTTPRequest* SSEClient::GetHttpReq() {

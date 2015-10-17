@@ -8,6 +8,8 @@
 #include <boost/foreach.hpp>
 #include <boost/any.hpp>
 #include <boost/optional.hpp>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "Common.h"
 #include "SSEConfig.h"
 
@@ -31,6 +33,7 @@ void SSEConfig::InitDefaults() {
  ConfigMap["server.threadsPerChannel"]        = "5";
  ConfigMap["server.allowUndefinedChannels"]   = "true";
 
+ ConfigMap["amqp.enabled"]                    = "false";
  ConfigMap["amqp.host"]                       = "127.0.0.1";
  ConfigMap["amqp.port"]                       = "5672";
  ConfigMap["amqp.user"]                       = "guest";
@@ -40,6 +43,8 @@ void SSEConfig::InitDefaults() {
  ConfigMap["redis.host"]                      = "127.0.0.1";
  ConfigMap["redis.port"]                      = "6379";
  ConfigMap["redis.numConnections"]            = "5";
+
+ ConfigMap["leveldb.storageDir"]              = ".";
 
  ConfigMap["default.cacheAdapter"]            = "redis";
  ConfigMap["default.cacheLength"]             = "500";
@@ -62,6 +67,7 @@ bool SSEConfig::load(const char *file) {
   // Populate ConfigMap.
   BOOST_FOREACH(ConfigMap_t::value_type &element, ConfigMap) {
     try {
+  // Event broadcasted OK..
       string val = pt.get<std::string>(element.first);
       ConfigMap[element.first] = val;
       DLOG(INFO) << element.first << " = " << ConfigMap[element.first];
@@ -75,6 +81,39 @@ bool SSEConfig::load(const char *file) {
 }
 
 /**
+  Loads publish restrictions from config file.
+  @param conf Reference to ChannelConfig to populate.
+  @param pt Reference to ptree to read from.
+**/
+void SSEConfig::GetAllowedPublishers(ChannelConfig& conf, boost::property_tree::ptree& pt) {
+  vector<string> RestrictPublish;
+  GetArray(RestrictPublish, pt.get_child("restrictPublish"));
+
+  try {
+   BOOST_FOREACH(const std::string& range_str, RestrictPublish) {
+    struct in_addr range_in;
+    int cidr = 32;
+    iprange_t iprange;
+
+    size_t cidr_start = range_str.find("/");
+    if (cidr_start != string::npos) {
+      cidr = boost::lexical_cast<int>(range_str.substr(cidr_start+1));
+    }
+
+    iprange.mask = ntohl(((~0U) << (32-cidr)));
+    const string& range_ip = range_str.substr(0, cidr_start);
+
+    LOG_IF(FATAL, inet_aton(range_ip.c_str(), &range_in) == 0) << "restrictPublish Invalid IP " << range_ip;
+    iprange.range = range_in.s_addr;
+
+    conf.allowedPublishers.push_back(iprange);
+   }
+  } catch(std::exception &e) {
+    LOG(FATAL) << "Error parsing restrictPublish entry in config: " << e.what();
+  }
+}
+
+/**
   Load static configured channels from config.
   @param pt Configuration ptree.
 */
@@ -83,6 +122,13 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
   DefaultChannelConfig.server = this;
   DefaultChannelConfig.cacheAdapter = GetValue("default.cacheAdapter");
   DefaultChannelConfig.cacheLength = GetValueInt("default.cacheLength");
+
+  // Get default publish restrictions.
+  try {
+    GetAllowedPublishers(DefaultChannelConfig, pt.get_child("default"));
+  } catch(...) {
+    LOG(WARNING) << "No default publish restrictions set, will allow all on channels with no restrictPublish set.";
+  }
 
   // Get default allowedOrigins.
   try {
@@ -113,6 +159,13 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
       ChannelMap[chName].allowedOrigins = DefaultAllowedOrigins;
     }
 
+    // Add list of allowed publishers for the current channel.
+    try {
+      GetAllowedPublishers(ChannelMap[chName], child.second);
+    } catch(...) {
+      ChannelMap[chName].allowedPublishers = DefaultChannelConfig.allowedPublishers;
+    }
+
     // Optional channel parameters.
     ChannelMap[chName].cacheAdapter = child.second.get<std::string>("cacheAdapter", DefaultChannelConfig.cacheAdapter);
     ChannelMap[chName].cacheLength = child.second.get<int>("cacheLength", DefaultChannelConfig.cacheLength);
@@ -124,6 +177,11 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
   }
 }
 
+/**
+ Get an array from a config item.
+ @param target Reference to array to populate with the result.
+ @param pt Reference to ptree to read from.
+**/
 void SSEConfig::GetArray(vector<std::string>& target, boost::property_tree::ptree& pt) {
   BOOST_FOREACH(boost::property_tree::ptree::value_type& child, pt) {
     target.push_back(child.second.get_value<std::string>());

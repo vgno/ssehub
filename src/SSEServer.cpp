@@ -34,40 +34,105 @@ SSEServer::~SSEServer() {
 }
 
 /**
-  AMQP callback function that will be called when a message arrives.
-  @param key AMQP routingkey,
-  @param msg AMQP message.
-*/
-void SSEServer::BroadcastCallback(string msg) {
-  SSEEvent* event = new SSEEvent(msg);
-
-  if (!event->compile()) {
-    LOG(ERROR) << "Discarding event with invalid format.";
-    delete(event);
-    stats.invalid_events_rcv++;
-    return;
+  Broadcasts event to channel.
+  @param event Reference to SSEEvent to broadcast.
+**/
+bool SSEServer::Broadcast(SSEEvent& event) {
+  SSEChannel* ch;
+  const string& chName = event.getpath();
+  
+  ch = GetChannel(chName, _config->GetValueBool("server.allowUndefinedChannels"));
+  if (ch == NULL) {
+    LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
+    return false;
   }
 
-  string chName;
-  // If path is set in the JSON event data use that as target channel name.
-  if (!event->getpath().empty()) { chName = event->getpath(); }
-  // If none of the is present just return and ignore the message.
-  else                           { return; }
+  ch->BroadcastEvent(&event);
 
-  SSEChannel *ch = GetChannel(chName);
+  return true;
+}
+
+/**
+  Checks if a client is allowed to publish to channel.
+  @param client Pointer to SSEClient.
+  @param chConf Reference to ChannelConfig object to check against.
+**/
+bool SSEServer::IsAllowedToPublish(SSEClient* client, const ChannelConfig& chConf) {
+  if (chConf.allowedPublishers.size() < 1) return true;
+
+  BOOST_FOREACH(const iprange_t& range, chConf.allowedPublishers) {
+    if ((client->GetSockAddr() & range.mask) == (range.range & range.mask)) {
+      LOG(INFO) << "Allowing publish to " << chConf.id << " from client " << client->GetIP();
+      return true;
+    }
+  }
+
+  DLOG(INFO) << "Dissallowing publish to " << chConf.id << " from client " << client->GetIP();
+  return false;
+}
+
+/**
+ Handle POST requests.
+ @param client Pointer to SSEClient initiating the request.
+ @param req Pointer to HTTPRequest.
+ **/
+void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
+  SSEEvent event(req->GetPostData());
+  bool validEvent;
+  const string& chName = req->GetPath().substr(1); 
+
+  // Set the event path to the endpoint we recieved the POST on.
+  event.setpath(chName);
+
+  // Validate the event.
+  validEvent = event.compile();
+
+  // Check if channel exist.
+  SSEChannel* ch = GetChannel(chName);
 
   if (ch == NULL) {
-    if (!_config->GetValueBool("server.allowUndefinedChannels")) {
-        LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
-        delete(event);
+    // Handle creation of new channels.
+    if (_config->GetValueBool("server.allowUndefinedChannels")) {
+      if (!IsAllowedToPublish(client, _config->GetDefaultChannelConfig())) {
+        HTTPResponse res(403);
+        client->Send(res.Get());
         return;
-    }
+      }
 
-    ch = new SSEChannel(_config->GetDefaultChannelConfig(), chName);
-    _channels.push_back(SSEChannelPtr(ch));
+      if (!validEvent) {
+        HTTPResponse res(400);
+        client->Send(res.Get());
+        return;
+      }
+
+      // Create the channel.
+      ch = GetChannel(chName, true);
+    } else {
+      HTTPResponse res(404);
+      client->Send(res.Get());
+      return;
+    }
+  } else {
+    // Handle existing channels.
+    if (!IsAllowedToPublish(client, ch->GetConfig())) {
+      HTTPResponse res(403);
+      client->Send(res.Get());
+      return;
+    }
+    
+    if (!validEvent) {
+      HTTPResponse res(400);
+      client->Send(res.Get());
+      return;
+    }
   }
 
-  ch->BroadcastEvent(event);
+  // Broacast the event.
+  Broadcast(event);
+  
+  // Event broadcasted OK.
+  HTTPResponse res(200);
+  client->Send(res.Get());
 }
 
 /**
@@ -76,9 +141,11 @@ void SSEServer::BroadcastCallback(string msg) {
 void SSEServer::Run() {
   InitSocket();
 
-  _datasource = boost::shared_ptr<SSEInputSource>(new AmqpInputSource());
-  _datasource->Init(this, boost::bind(&SSEServer::BroadcastCallback, this, _1));
-  _datasource->Run();
+  if (_config->GetValueBool("amqp.enabled")) {
+      _datasource = boost::shared_ptr<SSEInputSource>(new AmqpInputSource());
+      _datasource->Init(this);
+      _datasource->Run();
+  }
 
   InitChannels();
 
@@ -131,8 +198,9 @@ void SSEServer::InitChannels() {
   Get instance pointer to SSEChannel object from id if it exists.
   @param The id/path of the channel you want to get a instance pointer to.
 */
-SSEChannel* SSEServer::GetChannel(const string id) {
+SSEChannel* SSEServer::GetChannel(const string id, bool create) {
   SSEChannelList::iterator it;
+  SSEChannel* ch = NULL;
 
   for (it = _channels.begin(); it != _channels.end(); it++) {
     SSEChannel* chan = static_cast<SSEChannel*>((*it).get());
@@ -141,7 +209,12 @@ SSEChannel* SSEServer::GetChannel(const string id) {
     }
   }
 
-  return NULL;
+  if (create) {
+    ch = new SSEChannel(_config->GetDefaultChannelConfig(), id);
+    _channels.push_back(SSEChannelPtr(ch));
+  }
+
+  return ch;
 }
 
 /**
@@ -195,7 +268,7 @@ void SSEServer::AcceptLoop() {
     SSEClient* client = new SSEClient(tmpfd, &csin);
 
     struct epoll_event event;
-    event.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR | EPOLLET;
+    event.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
     event.data.ptr = static_cast<SSEClient*>(client);
 
     int ret = epoll_ctl(_efd, EPOLL_CTL_ADD, tmpfd, &event);
@@ -205,6 +278,15 @@ void SSEServer::AcceptLoop() {
       continue;
     }
   }
+}
+
+/**
+ Removes  socket from epoll fd set and deletes SSEClient object.
+ @param client SSEClient to remove.
+**/
+void SSEServer::RemoveClient(SSEClient* client) {
+  epoll_ctl(_efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
+  client->Destroy();
 }
 
 /**
@@ -226,14 +308,14 @@ void SSEServer::ClientRouterLoop() {
       // Close socket if an error occurs.
       if (eventList[i].events & EPOLLERR) {
         DLOG(WARNING) << "Error occurred while reading data from client " << client->GetIP() << ".";
-        client->Destroy();
+        RemoveClient(client);
         stats.router_read_errors++;
         continue;
       }
 
       if ((eventList[i].events & EPOLLHUP) || (eventList[i].events & EPOLLRDHUP)) {
         DLOG(WARNING) << "Client " << client->GetIP() << " hung up in router thread.";
-        client->Destroy();
+        RemoveClient(client);
         continue;
       }
 
@@ -242,7 +324,7 @@ void SSEServer::ClientRouterLoop() {
 
       if (len <= 0) {
         stats.router_read_errors++;
-        client->Destroy();
+        RemoveClient(client);
         continue;
       }
 
@@ -256,38 +338,60 @@ void SSEServer::ClientRouterLoop() {
         case HTTP_REQ_INCOMPLETE: continue;
 
         case HTTP_REQ_FAILED:
-         client->Destroy();
+         RemoveClient(client);
          stats.invalid_http_req++;
          continue;
 
         case HTTP_REQ_TO_BIG:
-         client->Destroy();
+         RemoveClient(client);
          stats.oversized_http_req++;
          continue;
 
         case HTTP_REQ_OK: break;
-      }
+
+        case HTTP_REQ_POST_INVALID_LENGTH:
+          { HTTPResponse res(411, "", false); client->Send(res.Get()); }
+          RemoveClient(client);
+          continue;
+
+        case HTTP_REQ_POST_TOO_LARGE:
+          DLOG(INFO) << "Client " <<  client->GetIP() << " sent too much POST data.";
+          { HTTPResponse res(413, "", false); client->Send(res.Get()); }
+          RemoveClient(client);
+          continue;
+
+        case HTTP_REQ_POST_START:
+          { HTTPResponse res(100, "", false); client->Send(res.Get()); }
+          continue;
+
+        case HTTP_REQ_POST_INCOMPLETE: continue;
+
+        case HTTP_REQ_POST_OK:
+          PostHandler(client, req);
+          RemoveClient(client);
+          continue;
+      } 
 
       if (!req->GetPath().empty()) {
         // Handle /stats endpoint.
         if (req->GetPath().compare("/stats") == 0) {
-          boost::thread(&SSEStatsHandler::SendToClient, stats, client);
+          stats.SendToClient(client);
           continue;
         }
 
         string chName = req->GetPath().substr(1);
-        DLOG(INFO) << "CHANNEL:" << chName << ".";
-
-        // substr(1) to remove the /.
         SSEChannel *ch = GetChannel(chName);
+
+        DLOG(INFO) << "Channel: " << chName;
+
         if (ch != NULL) {
-          ch->AddClient(client, req);
           epoll_ctl(_efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
+          ch->AddClient(client, req);
         } else {
           HTTPResponse res;
           res.SetBody("Channel does not exist.\n");
           client->Send(res.Get());
-          client->Destroy();
+          RemoveClient(client);
         }
       }
     }

@@ -6,8 +6,8 @@
 using namespace std;
 
 SSEEvent::SSEEvent(const string& jsondata) {
-  json_ss << jsondata;
-  retry = 0;
+  _json_ss << jsondata;
+  _retry = 0;
 }
 
 SSEEvent::~SSEEvent() {
@@ -19,22 +19,26 @@ bool SSEEvent::compile() {
   string indata;
 
   try {
-    boost::property_tree::read_json(json_ss, pt);
+    boost::property_tree::read_json(_json_ss, pt);
+
+    if (_path.empty()) { 
+      _path = pt.get<std::string>("path"); 
+    }
+
     indata = pt.get<std::string>("data"); // required.
   } catch (...) {
     return false;
   }
 
   try {
-    path = pt.get<std::string>("path");
-    id = pt.get<std::string>("id");
-    event = pt.get<std::string>("event");
-    retry =  pt.get<int>("retry");
+    _id = pt.get<std::string>("id");
+    _event = pt.get<std::string>("event");
+    _retry =  pt.get<int>("retry");
   } catch (...) {
     // Items not required, so don't fail.
   }
 
-  boost::split(data, indata, boost::is_any_of("\n"));
+  boost::split(_data, indata, boost::is_any_of("\n"));
 
  return true;
 }
@@ -42,14 +46,14 @@ bool SSEEvent::compile() {
 const string SSEEvent::get() {
   stringstream ss;
 
-  if (data.empty() || path.empty()) return "";
+  if (_data.empty() || _path.empty()) return "";
 
-  if (!id.empty()) ss << "id: " << id << endl;
-  if (!event.empty()) ss << "event: " << event << endl;
-  if (retry > 0) ss << "retry: " << retry << endl;
+  if (!_id.empty()) ss << "id: " << _id << endl;
+  if (!_event.empty()) ss << "event: " << _event << endl;
+  if (_retry > 0) ss << "retry: " << _retry << endl;
 
   vector<string>::iterator it;
-  for (it = data.begin(); it != data.end(); it++) {
+  for (it = _data.begin(); it != _data.end(); it++) {
     ss << "data: " << *it << endl;
   }
 
@@ -58,10 +62,14 @@ const string SSEEvent::get() {
   return ss.str();
 }
 
+void SSEEvent::setpath(const string path) {
+  _path = path;
+}
+
 const string SSEEvent::getpath() {
-  return path;
+  return _path;
 }
 
 const string SSEEvent::getid() {
-  return id;
+  return _id;
 }

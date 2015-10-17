@@ -16,6 +16,7 @@
 #include "SSEConfig.h"
 #include "CacheAdapters/Memory.h"
 #include "CacheAdapters/Redis.h"
+#include "CacheAdapters/LevelDB.h"
 
 using namespace std;
 
@@ -42,7 +43,7 @@ struct SSEChannelStats {
 
 class SSEChannel {
   public:
-    SSEChannel(ChannelConfig& conf, string id);
+    SSEChannel(ChannelConfig conf, string id);
     ~SSEChannel();
     string GetId();
     void Broadcast(const string& data);
@@ -53,9 +54,9 @@ class SSEChannel {
     const SSEChannelStats& GetStats();
     void AddClient(SSEClient* client, HTTPRequest* req);
     ulong GetNumClients();
+    const ChannelConfig& GetConfig();
 
   private:
-    string _id;
     int _efd;
     ClientHandlerList::iterator curthread;
     ChannelConfig _config;
@@ -68,9 +69,7 @@ class SSEChannel {
     char _evs_preamble_data[2052];
 
     void InitializeCache();
-
     void InitializeThreads();
-
     void CleanupMain();
     void CleanupThreads();
     void Ping();

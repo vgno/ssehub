@@ -15,12 +15,12 @@ extern int stop;
 
 /**
   Constructor.
-  @param conf Pointer to SSEConfig instance holding our _config.ration.
+  @param conf Pointer to SSEConfig instance holding our configuration.
   @param id Unique identifier for this channel.
 */
-SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
-  _id = id;
+SSEChannel::SSEChannel(ChannelConfig conf, string id) {
   _config = conf;
+  _config.id = id;
 
   _efd = epoll_create1(0);
   LOG_IF(FATAL, _efd == -1) << "epoll_create1 failed.";
@@ -35,7 +35,7 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   _stats.cache_size            = _config.cacheLength;
 
 
-  LOG(INFO) << "Initializing channel " << _id;
+  LOG(INFO) << "Initializing channel " << _config.id;
   LOG(INFO) << "Cache Adapter: " << _config.cacheAdapter;
   LOG(INFO) << "Cache length: " << _config.cacheLength;
   LOG(INFO) << "Threads per channel: " << _config.server->GetValue("server.threadsPerChannel");
@@ -56,7 +56,6 @@ SSEChannel::SSEChannel(ChannelConfig& conf, string id) {
   _evs_preamble_data[2051] = '\0';
 
   InitializeCache();
-
   InitializeThreads();
 }
 
@@ -71,9 +70,11 @@ SSEChannel::~SSEChannel() {
 void SSEChannel::InitializeCache() {
   const string adapter = _config.cacheAdapter;
   if (adapter == "redis") {
-    _cache_adapter = new Redis(_id, _config);
+    _cache_adapter = new Redis(_config.id, _config);
   } else if (adapter == "memory") {
     _cache_adapter = new Memory(_config);
+  } else if (adapter == "leveldb") {
+    _cache_adapter = new LevelDB(_config);
   }
 }
 
@@ -107,7 +108,7 @@ void SSEChannel::CleanupThreads() {
   Return the id of this channel.
 */
 string SSEChannel::GetId() {
-  return _id;
+  return _config.id;
 }
 
 /**
@@ -155,18 +156,17 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   // Send CORS headers.
   SetCorsHeaders(req, res);
 
-  // Disallow every other method than GET.
-  if (req->GetMethod().compare("GET") != 0) {
-    DLOG(INFO) << "Method: " << req->GetMethod();
-    res.SetStatus(405, "Method Not Allowed");
+   // Reply with CORS headers when we get a OPTIONS request.
+  if (req->GetMethod().compare("OPTIONS") == 0) {
     client->Send(res.Get());
     client->Destroy();
     return;
   }
 
-  // Reply with CORS headers when we get a OPTIONS request.
-  if (req->GetMethod().compare("OPTIONS") == 0) {
-    res.SetHeader("Access-Control-Allow-Origin", "*");
+  // Disallow every other method than GET.
+  if (req->GetMethod().compare("GET") != 0) {
+    DLOG(INFO) << "Method: " << req->GetMethod();
+    res.SetStatus(405, "Method Not Allowed");
     client->Send(res.Get());
     client->Destroy();
     return;
@@ -188,7 +188,6 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   }
 
   client->Send(res.Get());
-  client->DeleteHttpReq();
 
   // Send event history if requested.
   if (!lastEventId.empty()) {
@@ -196,9 +195,10 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   } else if (!req->GetQueryString("getcache").empty()) {
     SendCache(client);
   }
+  
+  client->DeleteHttpReq();
 
-
-  ev.events   = EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR | EPOLLET;
+  ev.events   = EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR;
   ev.data.ptr = client;
   ret = epoll_ctl(_efd, EPOLL_CTL_ADD, client->Getfd(), &ev);
 
@@ -207,7 +207,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
     client->Destroy();
     return;
   }
-
+  
   INC_LONG(_stats.num_connects);
 
   // Add client to handler thread in a round-robin fashion.
@@ -305,12 +305,12 @@ void SSEChannel::CleanupMain() {
           INC_LONG(_stats.num_disconnects);
         }
       } else if ((t_events[i].events & EPOLLHUP)  || (t_events[i].events & EPOLLRDHUP)) {
-        DLOG(INFO) << "Channel " << _id << ": Client disconnected.";
+        DLOG(INFO) << "Channel " << _config.id << ": Client disconnected.";
         client->MarkAsDead();
         INC_LONG(_stats.num_disconnects);
       } else if (t_events[i].events & EPOLLERR) {
         // If an error occours on a client socket, just drop the connection.
-        DLOG(INFO) << "Channel " << _id << ": Error on client socket: " << strerror(errno);
+        DLOG(INFO) << "Channel " << _config.id << ": Error on client socket: " << strerror(errno);
         client->MarkAsDead();
         INC_LONG(_stats.num_errors);
       }
@@ -349,4 +349,11 @@ ulong SSEChannel::GetNumClients() {
 const SSEChannelStats& SSEChannel::GetStats() {
   _stats.num_clients = GetNumClients();
   return _stats;
+}
+
+/**
+  Returns the ChannelConfig.
+**/
+const ChannelConfig& SSEChannel::GetConfig() {
+  return _config;
 }

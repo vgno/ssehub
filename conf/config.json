@@ -8,6 +8,7 @@
     "allowUndefinedChannels": "true"
   },
   "amqp": {
+    "enabled": "false",
     "host": "127.0.0.1",
     "port": 5672,
     "user": "guest",
@@ -19,20 +20,29 @@
     "port": 6379,
     "numConnections": 5
   },
+  "leveldb": {
+    "storageDir": "/tmp"
+  },
   "default": {
-    "cacheAdapter": "redis",
+    "cacheAdapter": "leveldb",
     "cacheLength": 500,
-    "allowedOrigins":  "*"
+    "allowedOrigins":  "*",
+    "restrictPublish": [
+      "127.0.0.1"
+    ]
   },
   "channels": [
     {
         "path": "test",
         "allowedOrigins": ["https://some.host"],
-        "cacheLength": 50
+        "cacheLength": 5
     },
     {
         "path": "test2",
-        "cacheAdapter": "memory"
+        "cacheAdapter": "memory",
+        "restrictPublish": [
+         "10.0.0.0/8"
+        ]
     }
   ]
 }

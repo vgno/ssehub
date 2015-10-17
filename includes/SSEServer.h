@@ -15,6 +15,7 @@
 #include <string>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include "SSEEvent.h"
 #include "SSEStatsHandler.h"
 #define MAXEVENTS 1024
 
@@ -24,6 +25,7 @@ extern int stop;
 class SSEConfig;
 class SSEChannel;
 class SSEInputSource;
+class HTTPRequest;
 
 typedef std::vector<boost::shared_ptr<SSEChannel> > SSEChannelList;
 
@@ -35,6 +37,8 @@ class SSEServer {
     void Run();
     const SSEChannelList& GetChannelList();
     SSEConfig* GetConfig();
+    bool IsAllowedToPublish(SSEClient* client, const struct ChannelConfig& chConf);
+    bool Broadcast(SSEEvent& event);
 
   private:
     SSEConfig *_config;
@@ -49,9 +53,10 @@ class SSEServer {
     void InitSocket();
     void AcceptLoop();
     void ClientRouterLoop();
-    void BroadcastCallback(std::string);
+    void PostHandler(SSEClient* client, HTTPRequest* req);
     void InitChannels();
-    SSEChannel* GetChannel(const std::string id);
+    void RemoveClient(SSEClient* client);
+    SSEChannel* GetChannel(const std::string id, bool create=false);
 };
 
 #endif

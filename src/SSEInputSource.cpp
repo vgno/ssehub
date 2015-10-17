@@ -11,10 +11,9 @@ using namespace std;
 SSEInputSource::SSEInputSource() {}
 SSEInputSource::~SSEInputSource() {}
 
-void SSEInputSource::Init(SSEServer* server, DataSourceCallback callback) {
+void SSEInputSource::Init(SSEServer* server) {
   _server = server;
   _config = server->GetConfig();
-  _callback = callback;
 }
 
 void SSEInputSource::Run() {

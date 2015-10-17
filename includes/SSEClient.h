@@ -5,6 +5,7 @@
 #include <deque>
 #include <sys/epoll.h>
 #include <netinet/in.h>
+#include <stdint.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include "HTTPRequest.h"
@@ -20,6 +21,7 @@ class SSEClient {
     int Getfd();
     HTTPRequest* GetHttpReq();
     const string GetIP();
+    uint32_t GetSockAddr();
     void MarkAsDead();
     bool IsDead();
     void Destroy();
