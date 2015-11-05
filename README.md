@@ -141,7 +141,7 @@ Stores events in Redis which also makes this store distributed and usable by mul
 <br>
 <br>
 To request all events since a certain ID use the query parameter `lastEventId=<id>` or header `Last-Event-ID: <id>`.
-You can also request the entire cache for a channel by using query parameter `getallcache=1`.
+You can also request the entire cache for a channel by using query parameter `getcache=1`.
 
 # License
 
