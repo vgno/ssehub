@@ -1,4 +1,4 @@
-FROM debian:latest
+FROM buildpack-deps:jessie
 MAINTAINER Ole Fredrik Skudsvik <oles@vg.no>
 
 RUN apt-get -y update
