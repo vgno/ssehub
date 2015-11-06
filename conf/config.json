@@ -5,10 +5,11 @@
     "logdir": "./",
     "pingInterval": 5,
     "threadsPerChannel": 2,
-    "allowUndefinedChannels": "true"
+    "allowUndefinedChannels": true,
+    "enablePost": true
   },
   "amqp": {
-    "enabled": "false",
+    "enabled": true,
     "host": "127.0.0.1",
     "port": 5672,
     "user": "guest",
