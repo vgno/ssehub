@@ -23,6 +23,7 @@
     "storageDir": "/tmp"
   },
   "default": {
+    "enablePost": false,
     "cacheAdapter": "leveldb",
     "cacheLength": 500,
     "allowedOrigins":  "*",

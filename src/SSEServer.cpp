@@ -361,13 +361,23 @@ void SSEServer::ClientRouterLoop() {
           continue;
 
         case HTTP_REQ_POST_START:
-          { HTTPResponse res(100, "", false); client->Send(res.Get()); }
+          if (!_config->GetValueBool("server.postEnabled")) {
+            { HTTPResponse res(400, "", false); client->Send(res.Get()); }
+            RemoveClient(client);
+          } else {
+            { HTTPResponse res(100, "", false); client->Send(res.Get()); }
+          }
           continue;
 
         case HTTP_REQ_POST_INCOMPLETE: continue;
 
         case HTTP_REQ_POST_OK:
-          PostHandler(client, req);
+          if (_config->GetValueBool("server.postEnabled")) {
+            PostHandler(client, req);
+          } else {
+            { HTTPResponse res(400, "", false); client->Send(res.Get()); }
+          }
+
           RemoveClient(client);
           continue;
       } 

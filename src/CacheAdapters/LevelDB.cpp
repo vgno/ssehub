@@ -53,8 +53,8 @@ void LevelDB::InitDB(const string& dbfile) {
 void LevelDB::CacheEvent(SSEEvent* event) {
   char* err = NULL;
 
-  leveldb_put(_db, _woptions, event->getid().c_str(), event->getid().length(), 
-      event->get().c_str(), event->get().length(), &err);
+  leveldb_put(_db, _woptions, event->getid().c_str(), event->getid().length()+1,
+      event->get().c_str(), event->get().length()+1, &err);
 
   if (err != NULL) {
     LOG(ERROR) << "Failed to cache event with id " << event->getid() << ": " << err;

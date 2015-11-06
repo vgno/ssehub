@@ -150,12 +150,9 @@ void AmqpInputSource::Consume() {
       LOG(ERROR) << "Error consuming message.";
     } else {
      string msg;
-     string key;
      msg.insert(0, (const char*)envelope.message.body.bytes, envelope.message.body.len);
-     key.insert(0, (const char*)envelope.routing_key.bytes, envelope.routing_key.len);
     
      SSEEvent event(msg);
-     event.setpath(key);
 
      if (event.compile()) {
        _server->Broadcast(event);
