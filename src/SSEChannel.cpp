@@ -26,13 +26,13 @@ SSEChannel::SSEChannel(ChannelConfig conf, string id) {
   LOG_IF(FATAL, _efd == -1) << "epoll_create1 failed.";
 
   // Initialize counters.
-  _stats.num_clients           = 0;
-  _stats.num_connects          = 0;
-  _stats.num_disconnects       = 0;
-  _stats.num_errors            = 0;
-  _stats.num_cached_events     = 0;
+  _stats.num_clients            = 0;
+  _stats.num_connects           = 0;
+  _stats.num_disconnects        = 0;
+  _stats.num_errors             = 0;
+  _stats.num_cached_events      = 0;
   _stats.num_broadcasted_events = 0;
-  _stats.cache_size            = _config.cacheLength;
+  _stats.cache_size             = _config.cacheLength;
 
 
   LOG(INFO) << "Initializing channel " << _config.id;
@@ -211,6 +211,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   INC_LONG(_stats.num_connects);
 
   // Add client to handler thread in a round-robin fashion.
+  client->SetNoDelay();
   (*curthread)->AddClient(client);
   curthread++;
 
@@ -250,10 +251,10 @@ void SSEChannel::BroadcastEvent(SSEEvent* event) {
   @param event Event to cache.
 */
 void SSEChannel::CacheEvent(SSEEvent* event) {
-    if (_cache_adapter) {
-      _cache_adapter->CacheEvent(event);
-      _stats.num_cached_events = _cache_adapter->GetSizeOfCachedEvents();
-    }
+  if (_cache_adapter) {
+    _cache_adapter->CacheEvent(event);
+    _stats.num_cached_events = _cache_adapter->GetSizeOfCachedEvents();
+  }
 }
 
 /**
@@ -264,10 +265,13 @@ void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
   deque<string>::const_iterator it;
   deque<string> events = _cache_adapter->GetEventsSinceId(lastId);
 
-  while (!events.empty()) {
-    client->Send(events.front());
-    events.pop_front();
+  client->Cork();
+
+  BOOST_FOREACH(const string& event, events) {
+    client->Send(event);
   }
+
+  client->Uncork();
 }
 
 /**
@@ -278,10 +282,13 @@ void SSEChannel::SendCache(SSEClient* client) {
  deque<string>::const_iterator it;
  deque<string> events = _cache_adapter->GetAllEvents();
 
-  while (!events.empty()) {
-    client->Send(events.front());
-    events.pop_front();
+  client->Cork();
+
+  BOOST_FOREACH(const string& event, events) {
+    client->Send(event);
   }
+
+  client->Uncork();
 }
 
 /**

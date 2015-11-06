@@ -26,6 +26,9 @@ class SSEClient {
     bool IsDead();
     void Destroy();
     void DeleteHttpReq();
+    void Cork();
+    void Uncork();
+    void SetNoDelay();
 
   private:
     int _fd;
