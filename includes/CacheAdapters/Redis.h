@@ -18,7 +18,7 @@ class Redis : public CacheInterface {
 
   private:
     void Expire(int ttl);
-    RedisSyncClient* GetClient();
+    bool InitClient(RedisSyncClient& client);
     string Lookup(string hostname);
     const string _key;
     string _host;
