@@ -114,6 +114,7 @@ Events should be sent in the following format:
 The `id` and `event` fields is optional, but only events with a defined `id` will be cached.
 
 When using POST for publishing events the `path` element in the event is ignored and replaced with the channel/endpoint you are posting to.
+If you are using AMQP then you **must** set `path` to the channel you want to publish to.
 
 # Example using POST
 

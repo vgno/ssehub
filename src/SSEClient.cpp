@@ -19,10 +19,8 @@ SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
 
   m_httpReq = boost::shared_ptr<HTTPRequest>(new HTTPRequest());
 
-  // Set TCP_NODELAY on socket.
   int flag = 1;
-  setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
-  
+
   // Set KEEPALIVE on socket.
   setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char*)&flag, sizeof(int));
 
@@ -38,6 +36,22 @@ SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
 */
 void SSEClient::Destroy() {
   delete(this);
+}
+
+void SSEClient::Cork() {
+  int flag = 1;
+  setsockopt(Getfd(), IPPROTO_TCP, TCP_CORK, (char*)&flag, sizeof(int));
+}
+
+void SSEClient::Uncork() {
+  int flag = 0;
+  setsockopt(Getfd(), IPPROTO_TCP, TCP_CORK, (char*)&flag, sizeof(int));
+}
+
+void SSEClient::SetNoDelay() {
+  // Set TCP_NODELAY on socket.
+  int flag = 1;
+  setsockopt(Getfd(), IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
 }
 
 /**
