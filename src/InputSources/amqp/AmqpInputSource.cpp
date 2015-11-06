@@ -152,10 +152,12 @@ void AmqpInputSource::Consume() {
      string msg;
      msg.insert(0, (const char*)envelope.message.body.bytes, envelope.message.body.len);
     
-     SSEEvent event(msg);
+     SSEEvent* event = new SSEEvent(msg);
 
-     if (event.compile()) {
+     if (event->compile()) {
        _server->Broadcast(event);
+     } else {
+       delete(event);
      }
     }
 

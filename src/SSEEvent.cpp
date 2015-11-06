@@ -26,7 +26,7 @@ bool SSEEvent::compile() {
     }
 
     indata = pt.get<std::string>("data"); // required.
-  } catch (...) {
+  } catch (std::exception& e) {
     return false;
   }
 
