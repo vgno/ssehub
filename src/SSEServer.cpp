@@ -392,6 +392,12 @@ void SSEServer::ClientRouterLoop() {
         if (req->GetPath().compare("/stats") == 0) {
           stats.SendToClient(client);
           continue;
+        } else if (req->GetPath().compare("/") == 0) {
+          HTTPResponse res;
+          res.SetBody("OK\n");
+          client->Send(res.Get());
+          RemoveClient(client);
+          continue;          
         }
 
         string chName = req->GetPath().substr(1);
