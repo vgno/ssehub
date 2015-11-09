@@ -43,7 +43,7 @@ void SSEConfig::InitDefaults() {
 
  ConfigMap["redis.host"]                      = "127.0.0.1";
  ConfigMap["redis.port"]                      = "6379";
- ConfigMap["redis.numConnections"]            = "5";
+ ConfigMap["redis.prefix"]                    = "ssehub";
 
  ConfigMap["leveldb.storageDir"]              = ".";
 
