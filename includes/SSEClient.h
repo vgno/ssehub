@@ -26,14 +26,12 @@ class SSEClient {
     bool IsDead();
     void Destroy();
     void DeleteHttpReq();
-    void Cork();
-    void Uncork();
-    void SetNoDelay();
 
   private:
     int _fd;
     struct sockaddr_in _csin;
     bool _dead;
+    unsigned int _sndBufSize; 
     boost::mutex _writelock;
     boost::shared_ptr<HTTPRequest> m_httpReq;
 };
