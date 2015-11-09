@@ -410,6 +410,7 @@ void SSEServer::ClientRouterLoop() {
           ch->AddClient(client, req);
         } else {
           HTTPResponse res;
+          res.SetStatus(404);
           res.SetBody("Channel does not exist.\n");
           client->Send(res.Get());
           RemoveClient(client);
