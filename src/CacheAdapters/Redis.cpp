@@ -13,9 +13,11 @@ using namespace std;
 extern int stop;
 
 
-Redis::Redis(const string key, const ChannelConfig& config) : _config(config), _key(key) {
+Redis::Redis(const string key, const ChannelConfig& config) : _config(config) {
   _host = Lookup(_config.server->GetValue("redis.host"));
   _port = _config.server->GetValueInt("redis.port");
+  _key = _config.server->GetValue("redis.prefix") + "_" + key;
+
 
   if (_host.empty()) {
     LOG(ERROR) << "Failed to look up host for redis adapter " << _config.server->GetValue("redis.host") << " Retrying in 5 seconds.";

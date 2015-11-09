@@ -20,7 +20,7 @@ class Redis : public CacheInterface {
     void Expire(int ttl);
     bool InitClient(RedisSyncClient& client);
     string Lookup(string hostname);
-    const string _key;
+    string _key;
     string _host;
     unsigned short _port;
 };
