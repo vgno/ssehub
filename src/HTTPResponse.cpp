@@ -18,6 +18,11 @@ void HTTPResponse::SetStatus(int status, std::string statusMsg) {
   m_statusMsg = statusMsg;
 }
 
+void HTTPResponse::SetStatus(int status) {
+  m_statusCode = status;
+  m_statusMsg = GetStatusMsg(status);;
+}
+
 void HTTPResponse::SetHeader(const std::string& name, const std::string& value) {
   m_headers[name] = value;
 }

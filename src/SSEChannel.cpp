@@ -213,7 +213,6 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   INC_LONG(_stats.num_connects);
 
   // Add client to handler thread in a round-robin fashion.
-  client->SetNoDelay();
   (*curthread)->AddClient(client);
   curthread++;
 
@@ -266,14 +265,15 @@ void SSEChannel::CacheEvent(SSEEvent* event) {
 void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
   deque<string>::const_iterator it;
   deque<string> events = _cache_adapter->GetEventsSinceId(lastId);
-
-  client->Cork();
+  string sndBuf;
 
   BOOST_FOREACH(const string& event, events) {
-    client->Send(event);
+    sndBuf.append(event);
   }
 
-  client->Uncork();
+  if (!sndBuf.empty()) {
+    client->Send(sndBuf);
+  }
 }
 
 /**
@@ -284,13 +284,14 @@ void SSEChannel::SendCache(SSEClient* client) {
  deque<string>::const_iterator it;
  deque<string> events = _cache_adapter->GetAllEvents();
 
-  client->Cork();
-
+  string sndBuf;
   BOOST_FOREACH(const string& event, events) {
-    client->Send(event);
+    sndBuf.append(event);
   }
 
-  client->Uncork();
+  if (!sndBuf.empty()) {
+    client->Send(sndBuf);
+  }
 }
 
 /**

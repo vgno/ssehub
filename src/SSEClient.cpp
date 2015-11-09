@@ -14,12 +14,14 @@
 SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   _fd = fd;
   _dead = false;
-  memcpy(&_csin, csin, sizeof(struct sockaddr_in));
+ 
+   memcpy(&_csin, csin, sizeof(struct sockaddr_in));
   DLOG(INFO) << "Initialized client with IP: " << GetIP();
 
   m_httpReq = boost::shared_ptr<HTTPRequest>(new HTTPRequest());
 
   int flag = 1;
+  _sndBufSize = 16384;
 
   // Set KEEPALIVE on socket.
   setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char*)&flag, sizeof(int));
@@ -29,6 +31,9 @@ SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   int timeout = 10000;
   setsockopt (fd, SOL_TCP, TCP_USER_TIMEOUT, (char*) &timeout, sizeof (timeout));
   #endif
+
+  // Set TCP_NODELAY on socket.
+  setsockopt(Getfd(), IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
 }
 
 /**
@@ -38,29 +43,38 @@ void SSEClient::Destroy() {
   delete(this);
 }
 
-void SSEClient::Cork() {
-  int flag = 1;
-  setsockopt(Getfd(), IPPROTO_TCP, TCP_CORK, (char*)&flag, sizeof(int));
-}
-
-void SSEClient::Uncork() {
-  int flag = 0;
-  setsockopt(Getfd(), IPPROTO_TCP, TCP_CORK, (char*)&flag, sizeof(int));
-}
-
-void SSEClient::SetNoDelay() {
-  // Set TCP_NODELAY on socket.
-  int flag = 1;
-  setsockopt(Getfd(), IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(int));
-}
-
 /**
  Sends data to client.
  @param data String buffer to send.
 */
 int SSEClient::Send(const string &data) {
   boost::mutex::scoped_lock lock(_writelock);
-  return send(_fd, data.c_str(), data.length(), MSG_NOSIGNAL);
+  int ret;
+  unsigned int dataWritten;;
+
+  // Split data into _sbdBufSize chunks.
+  for(unsigned int i = 0; i < data.length(); i += _sndBufSize) {
+      string chunk = data.substr(i, _sndBufSize);
+      dataWritten = 0;
+
+      // Run send() until the whole chunk is transmitted.
+      do {
+        ret = send(_fd, chunk.c_str()+dataWritten, chunk.length()-dataWritten, MSG_NOSIGNAL);     
+
+        if (ret < 0) {
+          if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) { 
+            continue;
+          } else {
+            DLOG(ERROR) << "Error sending data to client with IP " << GetIP() << ret << ": " << strerror(errno);
+            return ret;
+          }
+        }
+
+        dataWritten += ret;
+      } while (dataWritten < chunk.size());
+  }
+
+  return dataWritten;
 }
 
 /**
