@@ -191,13 +191,17 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
 
   client->Send(res.Get());
 
+  // Apply filters.
+  if (!req->GetQueryString("filterid").empty()) client->Subscribe(req->GetQueryString("filterid"), SUBSCRIPTION_ID);
+  if (!req->GetQueryString("filterevent").empty()) client->Subscribe(req->GetQueryString("filterevent"), SUBSCRIPTION_EVENT_TYPE);
+
   // Send event history if requested.
   if (!lastEventId.empty()) {
     SendEventsSince(client, lastEventId);
   } else if (!req->GetQueryString("getcache").empty()) {
     SendCache(client);
   }
-  
+
   client->DeleteHttpReq();
 
   ev.events   = EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR;
@@ -265,14 +269,9 @@ void SSEChannel::CacheEvent(SSEEvent* event) {
 void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
   deque<string>::const_iterator it;
   deque<string> events = _cache_adapter->GetEventsSinceId(lastId);
-  string sndBuf;
 
   BOOST_FOREACH(const string& event, events) {
-    sndBuf.append(event);
-  }
-
-  if (!sndBuf.empty()) {
-    client->Send(sndBuf);
+    client->Send(event);
   }
 }
 
@@ -284,13 +283,8 @@ void SSEChannel::SendCache(SSEClient* client) {
  deque<string>::const_iterator it;
  deque<string> events = _cache_adapter->GetAllEvents();
 
-  string sndBuf;
   BOOST_FOREACH(const string& event, events) {
-    sndBuf.append(event);
-  }
-
-  if (!sndBuf.empty()) {
-    client->Send(sndBuf);
+    client->Send(event);
   }
 }
 
