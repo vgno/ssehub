@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <boost/shared_ptr.hpp>
+#include <boost/foreach.hpp>
 #include "SSEClient.h"
 #include "HTTPRequest.h"
 
@@ -52,6 +53,24 @@ int SSEClient::Send(const string &data) {
   int ret;
   unsigned int dataWritten;;
 
+  if (isFiltered()) {
+    size_t id_pos = data.find("id:");
+    size_t event_pos = data.find("event:");
+    string eventId;
+    string eventType;
+
+    if (id_pos != string::npos) {
+      eventId = data.substr(id_pos+4, data.find_first_of('\n', id_pos)-4);
+    }
+
+    if (event_pos != string::npos) {
+      eventType = data.substr(event_pos+7, data.find_first_of('\n', event_pos-7));
+    }
+
+    if (!eventId.empty() && !isSubscribed(eventId, SUBSCRIPTION_ID)) return 0;
+    if (!eventType.empty() && !isSubscribed(eventType, SUBSCRIPTION_EVENT_TYPE)) return 0;
+  }
+
   // Split data into _sbdBufSize chunks.
   for(unsigned int i = 0; i < data.length(); i += _sndBufSize) {
       string chunk = data.substr(i, _sndBufSize);
@@ -65,7 +84,7 @@ int SSEClient::Send(const string &data) {
           if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) { 
             continue;
           } else {
-            DLOG(ERROR) << "Error sending data to client with IP " << GetIP() << ret << ": " << strerror(errno);
+            DLOG(ERROR) << "Error sending data to client with IP " << GetIP() << ": " << strerror(errno);
             return ret;
           }
         }
@@ -130,4 +149,27 @@ void SSEClient::MarkAsDead() {
 
 bool SSEClient::IsDead() {
   return _dead;
+}
+
+
+bool SSEClient::isSubscribed(const string key, SubscriptionType type) {
+ BOOST_FOREACH(const SubscriptionElement& subscription, _subscriptions) {
+    if (subscription.type == type && (subscription.key.compare(0, subscription.key.length(), key) == 0)) {
+      return true;
+    }
+  }
+
+ return false;
+}
+
+void SSEClient::Subscribe(const string key, SubscriptionType type) {
+  SubscriptionElement subscription;
+  subscription.key  = key;
+  subscription.type = type;
+
+  _subscriptions.push_back(subscription);
+}
+
+bool SSEClient::isFiltered() {
+ return (_subscriptions.size() > 0);
 }
