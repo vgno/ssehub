@@ -38,16 +38,19 @@ class SSEClient {
     void DeleteHttpReq();
     bool isSubscribed(const string key, SubscriptionType type);
     void Subscribe(const string key, SubscriptionType type);
-    bool isFiltered();
+    bool isFilterAcceptable(const string& data);
 
    private:
     int _fd;
     struct sockaddr_in _csin;
     bool _dead;
+    bool _isEventFiltered;
+    bool _isIdFiltered;
     unsigned int _sndBufSize;
     vector<SubscriptionElement> _subscriptions;
     boost::mutex _writelock;
     boost::shared_ptr<HTTPRequest> m_httpReq;
+    const string GetSSEField(const string& data, const string& fieldName);
 };
 
 #endif
