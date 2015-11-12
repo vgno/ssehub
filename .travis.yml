@@ -13,4 +13,4 @@ addons:
     - libboost-thread-dev
     - libboost-test-dev
     - librabbitmq-dev
-scripts: make && cd tests && make
+script: make && cd tests && make
