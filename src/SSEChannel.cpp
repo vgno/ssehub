@@ -213,7 +213,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
     client->Destroy();
     return;
   }
-  
+
   INC_LONG(_stats.num_connects);
 
   // Add client to handler thread in a round-robin fashion.

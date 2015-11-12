@@ -55,17 +55,17 @@ void SSEClientHandler::ProcessQueue() {
     std::string msg;
     _msgqueue.WaitPop(msg);
 
-   for (SSEClientPtrList::iterator it = _clientlist.begin(); it != _clientlist.end(); it++) {
-     SSEClientPtr client = static_cast<SSEClientPtr&>(*it);
+    for (SSEClientPtrList::iterator it = _clientlist.begin(); it != _clientlist.end(); it++) {
+      SSEClientPtr client = static_cast<SSEClientPtr&>(*it);
 
-     if (client->IsDead()) {
-       DLOG(INFO) << "Removing disconnected client from clienthandler.";
-       it = _clientlist.erase(it);
-       continue;
-     }
+      if (client->IsDead()) {
+        DLOG(INFO) << "Removing disconnected client from clienthandler.";
+        it = _clientlist.erase(it);
+        continue;
+      }
 
-     client->Send(msg);
-   }
+      client->Send(msg);
+    }
   }
 }
 
