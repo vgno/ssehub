@@ -77,7 +77,9 @@ void SSEChannel::InitializeCache() {
     _cache_adapter = new LevelDB(_config);
   }
 
-  _stats.num_cached_events = _cache_adapter->GetSizeOfCachedEvents();
+  if (_cache_adapter) {
+    _stats.num_cached_events = _cache_adapter->GetSizeOfCachedEvents();
+  }
 }
 
 /**
