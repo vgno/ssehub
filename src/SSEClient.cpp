@@ -26,8 +26,8 @@ SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   // By default limit max chunk size to 16kB.
   _sndBufSize = 16384;
 
-  _isEventFiltered = false;
   _isIdFiltered = false;
+  _isEventFiltered = false;
 
   // Set KEEPALIVE on socket.
   setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char*)&flag, sizeof(int));
@@ -56,7 +56,7 @@ void SSEClient::Destroy() {
 int SSEClient::Send(const string &data) {
   boost::mutex::scoped_lock lock(_writelock);
   int ret;
-  unsigned int dataWritten;;
+  unsigned int dataWritten;
 
   if (!isFilterAcceptable(data)) return 0;
 
@@ -182,7 +182,7 @@ bool SSEClient::isFilterAcceptable(const string& data) {
   if (_subscriptions.size() < 1) return true;
 
   // Only filter payloads having the "data: " field set.
-  if ((data.compare(0, 6, "data: ") == 0) ||
+  if ((data.compare(0, 6, "data: ") != 0) ||
       (data.find("\ndata: ") == string::npos)) {
     return true;
   }
