@@ -10,9 +10,9 @@ addons:
     - libboost-dev
     - libleveldb-dev
     - libboost-system-dev
+    - libboost-program-options-dev
     - libboost-thread-dev
     - libboost-test-dev
-    - libboost-all-dev
     - librabbitmq-dev
 script:
   - make
