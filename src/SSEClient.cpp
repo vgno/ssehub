@@ -182,7 +182,7 @@ bool SSEClient::isFilterAcceptable(const string& data) {
   if (_subscriptions.size() < 1) return true;
 
   // Only filter payloads having the "data: " field set.
-  if ((data.compare(0, 6, "data: ") != 0) ||
+  if ((data.compare(0, 6, "data: ") != 0) &&
       (data.find("\ndata: ") == string::npos)) {
     return true;
   }
