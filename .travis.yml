@@ -12,6 +12,7 @@ addons:
     - libboost-system-dev
     - libboost-thread-dev
     - libboost-test-dev
+    - libboost-all-dev
     - librabbitmq-dev
 script:
   - make
