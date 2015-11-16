@@ -6,6 +6,7 @@
 #include <boost/foreach.hpp>
 #include "SSEClient.h"
 #include "HTTPRequest.h"
+#include <sys/uio.h>
 
 /**
  Constructor.
@@ -22,9 +23,6 @@ SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   m_httpReq = boost::shared_ptr<HTTPRequest>(new HTTPRequest());
 
   int flag = 1;
-
-  // By default limit max chunk size to 16kB.
-  _sndBufSize = 16384;
 
   _isIdFiltered = false;
   _isEventFiltered = false;
@@ -49,40 +47,90 @@ void SSEClient::Destroy() {
   delete(this);
 }
 
+/*
+ Cut off @param bytes from our internal sendbuffer.
+ @param bytes Number of bytes to cut off.
+*/
+size_t SSEClient::PruneSendBuffer(size_t bytes) {
+  int bytes_used = 0;
+  int i = 0;
+
+  for (vector<string>::iterator it = _sndBuf.begin(); it != _sndBuf.end(); it++, i++) {
+    if ((bytes_used + (*it).length()) > bytes) {
+      int used_here = bytes-bytes_used;
+
+      _sndBufLock.lock();
+      *it = (*it).substr(used_here, (*it).length()-used_here);
+      _sndBuf.erase(_sndBuf.begin(), it);
+      _sndBufLock.unlock();
+      break;
+    }
+    bytes_used += (*it).length();
+  }
+
+  return _sndBuf.size();
+}
+
+int SSEClient::Flush() {
+  int ret;
+  vector<string>::iterator sndBuf_it;
+
+  if (_sndBuf.size() < 1) return 0;
+  _sndBufLock.lock();
+  sndBuf_it = _sndBuf.begin();
+
+  // Use writev to write IOVEC_SIZE chunks of _sndBuf at one time.
+  for (unsigned int i = 0; i <= (_sndBuf.size() / IOVEC_SIZE); i++) {
+    struct iovec siov[IOVEC_SIZE];
+    long siov_len = 0;
+    int siov_cnt = 0;
+
+    BOOST_FOREACH(const string& buf, _sndBuf) {
+      if (siov_cnt == IOVEC_SIZE) break;
+      siov[siov_cnt].iov_base  = (char*)buf.c_str();
+      siov[siov_cnt].iov_len   = buf.length();
+      siov_len                += buf.length();
+      siov_cnt++;
+    }
+
+    _sndBufLock.unlock();
+
+    ret = writev(_fd, siov, siov_cnt);
+
+    if (ret == -1) {
+      DLOG(INFO) << GetIP() << ": flush error: " << strerror(errno);
+      break;
+    }
+
+    if (ret < siov_len) {
+      // Remove data that was written from _sndBuf.
+      PruneSendBuffer(ret);
+      DLOG(INFO) << GetIP() << ": Could not write entire buffer, wrote " << ret << " of " << siov_len << " bytes.";
+      break;
+    }
+
+    // Remove sent elements from _sndBuf.
+    _sndBufLock.lock();
+    _sndBuf.erase(sndBuf_it, (sndBuf_it+siov_cnt));
+    _sndBufLock.unlock();
+  }
+
+  return ret;
+}
+
 /**
  Sends data to client.
  @param data String buffer to send.
 */
-int SSEClient::Send(const string &data) {
-  boost::mutex::scoped_lock lock(_writelock);
-  int ret;
-  unsigned int dataWritten;
-
+int SSEClient::Send(const string &data, bool flush) {
   if (!isFilterAcceptable(data)) return 0;
 
-  // Split data into _sndBufSize chunks.
-  for(unsigned int i = 0; i < data.length(); i += _sndBufSize) {
-      string chunk = data.substr(i, _sndBufSize);
-      dataWritten = 0;
+  _sndBufLock.lock();
+  _sndBuf.push_back(boost::move(data));
+  _sndBufLock.unlock();
 
-      // Run send() until the whole chunk is transmitted.
-      do {
-        ret = send(_fd, chunk.c_str()+dataWritten, chunk.length()-dataWritten, MSG_NOSIGNAL);     
-
-        if (ret < 0) {
-          if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) { 
-            continue;
-          } else {
-            DLOG(ERROR) << "Error sending data to client with IP " << GetIP() << ": " << strerror(errno);
-            return ret;
-          }
-        }
-
-        dataWritten += ret;
-      } while (dataWritten < chunk.size());
-  }
-
-  return dataWritten;
+  if (flush) Flush();
+  return _sndBuf.size();
 }
 
 /**
@@ -95,6 +143,7 @@ size_t SSEClient::Read(void* buf, int len) {
 }
 
 /**
+
   Destructor.
 */
 SSEClient::~SSEClient() {

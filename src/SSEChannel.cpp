@@ -206,7 +206,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
 
   client->DeleteHttpReq();
 
-  ev.events   = EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR;
+  ev.events   = EPOLLET | EPOLLOUT | EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR;
   ev.data.ptr = client;
   ret = epoll_ctl(_efd, EPOLL_CTL_ADD, client->Getfd(), &ev);
 
@@ -286,7 +286,7 @@ void SSEChannel::SendCache(SSEClient* client) {
  deque<string> events = _cache_adapter->GetAllEvents();
 
   BOOST_FOREACH(const string& event, events) {
-    client->Send(event);
+    client->Send(event, SND_NO_FLUSH);
   }
 }
 
@@ -319,6 +319,9 @@ void SSEChannel::CleanupMain() {
         DLOG(INFO) << "Channel " << _config.id << ": Error on client socket: " << strerror(errno);
         client->MarkAsDead();
         INC_LONG(_stats.num_errors);
+      } else if (t_events[i].events & EPOLLOUT) {
+        DLOG(INFO) << client->GetIP() << ": EPOLLOUT, flushing send buffer.";
+        client->Flush();
       }
     }
   }
