@@ -73,11 +73,9 @@ size_t SSEClient::PruneSendBuffer(size_t bytes) {
 
 int SSEClient::Flush() {
   int ret;
-  vector<string>::iterator sndBuf_it;
-
+  
   if (_sndBuf.size() < 1) return 0;
   _sndBufLock.lock();
-  sndBuf_it = _sndBuf.begin();
 
   // Use writev to write IOVEC_SIZE chunks of _sndBuf at one time.
   for (unsigned int i = 0; i <= (_sndBuf.size() / IOVEC_SIZE); i++) {
@@ -111,7 +109,7 @@ int SSEClient::Flush() {
 
     // Remove sent elements from _sndBuf.
     _sndBufLock.lock();
-    _sndBuf.erase(sndBuf_it, (sndBuf_it+siov_cnt));
+    _sndBuf.erase(_sndBuf.begin(), (_sndBuf.begin()+siov_cnt));
     _sndBufLock.unlock();
   }
 
