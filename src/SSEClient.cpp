@@ -51,7 +51,8 @@ void SSEClient::Destroy() {
  Cut off @param bytes from our internal sendbuffer.
  @param bytes Number of bytes to cut off.
 */
-size_t SSEClient::PruneSendBuffer(size_t bytes) {
+size_t SSEClient::PruneSendBufferBytes(size_t bytes) {
+  boost::mutex::scoped_lock lock(_sndBufLock);
   int bytes_used = 0;
   int i = 0;
 
@@ -59,15 +60,35 @@ size_t SSEClient::PruneSendBuffer(size_t bytes) {
     if ((bytes_used + (*it).length()) > bytes) {
       int used_here = bytes-bytes_used;
 
-      _sndBufLock.lock();
       *it = (*it).substr(used_here, (*it).length()-used_here);
-      _sndBuf.erase(_sndBuf.begin(), it);
-      _sndBufLock.unlock();
+
+      if (i > 1) {
+        LOG(INFO) << "Will not delete entire vector.";
+        _sndBuf.erase(_sndBuf.begin(), it);
+      }
+
       break;
     }
     bytes_used += (*it).length();
   }
 
+  return _sndBuf.size();
+}
+
+size_t SSEClient::PruneSendBufferItems(size_t items) {
+  boost::mutex::scoped_lock lock(_sndBufLock);
+  vector<string>::iterator it;
+
+  if (items > _sndBuf.size()) {
+    LOG(ERROR) << "Something bad happened: Trying to remove more items than present in _sndBuf.";
+    _sndBuf.clear();
+    return 0;
+  }
+
+  it  = _sndBuf.begin();
+  it += items;
+
+  _sndBuf.erase(_sndBuf.begin(), it);
   return _sndBuf.size();
 }
 
@@ -102,15 +123,13 @@ int SSEClient::Flush() {
 
     if (ret < siov_len) {
       // Remove data that was written from _sndBuf.
-      PruneSendBuffer(ret);
+      PruneSendBufferBytes(ret);
       DLOG(INFO) << GetIP() << ": Could not write entire buffer, wrote " << ret << " of " << siov_len << " bytes.";
       break;
     }
 
     // Remove sent elements from _sndBuf.
-    _sndBufLock.lock();
-    _sndBuf.erase(_sndBuf.begin(), (_sndBuf.begin()+siov_cnt));
-    _sndBufLock.unlock();
+    PruneSendBufferItems(siov_cnt);
   }
 
   return ret;
