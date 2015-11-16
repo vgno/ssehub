@@ -10,6 +10,9 @@
 #include <boost/thread.hpp>
 #include "HTTPRequest.h"
 
+#define IOVEC_SIZE 512
+#define SND_NO_FLUSH false
+
 enum SubscriptionType {
   SUBSCRIPTION_ID,
   SUBSCRIPTION_EVENT_TYPE
@@ -26,7 +29,7 @@ class SSEClient {
   public:
     SSEClient(int, struct sockaddr_in* csin);
     ~SSEClient();
-    int Send(const string &data);
+    int Send(const string &data, bool flush=true);
     size_t Read(void* buf, int len);
     int Getfd();
     HTTPRequest* GetHttpReq();
@@ -39,6 +42,7 @@ class SSEClient {
     bool isSubscribed(const string key, SubscriptionType type);
     void Subscribe(const string key, SubscriptionType type);
     bool isFilterAcceptable(const string& data);
+    int Flush();
 
    private:
     int _fd;
@@ -46,10 +50,11 @@ class SSEClient {
     bool _dead;
     bool _isEventFiltered;
     bool _isIdFiltered;
-    unsigned int _sndBufSize;
+    vector<string> _sndBuf;
     vector<SubscriptionElement> _subscriptions;
-    boost::mutex _writelock;
+    boost::mutex _sndBufLock;
     boost::shared_ptr<HTTPRequest> m_httpReq;
+    size_t PruneSendBuffer(size_t bytes);
     const string GetSSEField(const string& data, const string& fieldName);
 };
 
