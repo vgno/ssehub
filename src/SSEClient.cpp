@@ -52,7 +52,6 @@ void SSEClient::Destroy() {
  @param bytes Number of bytes to cut off.
 */
 size_t SSEClient::PruneSendBufferBytes(size_t bytes) {
-  boost::mutex::scoped_lock lock(_sndBufLock);
   int bytes_used = 0;
   int i = 0;
 
@@ -75,7 +74,6 @@ size_t SSEClient::PruneSendBufferBytes(size_t bytes) {
 }
 
 size_t SSEClient::PruneSendBufferItems(size_t items) {
-  boost::mutex::scoped_lock lock(_sndBufLock);
   vector<string>::iterator it;
 
   if (items > _sndBuf.size()) {
@@ -93,37 +91,55 @@ size_t SSEClient::PruneSendBufferItems(size_t items) {
 
 int SSEClient::Flush() {
   int ret;
-  
+  size_t data_len = 0;
+
   if (_sndBuf.size() < 1) return 0;
-  _sndBufLock.lock();
 
-  // Use writev to write IOVEC_SIZE chunks of _sndBuf at one time.
-  for (unsigned int i = 0; i <= (_sndBuf.size() / IOVEC_SIZE); i++) {
-    struct iovec siov[IOVEC_SIZE];
-    long siov_len = 0;
-    int siov_cnt = 0;
+  boost::mutex::scoped_lock lock(_sndBufLock);
 
-    BOOST_FOREACH(const string& buf, _sndBuf) {
-      if (siov_cnt == IOVEC_SIZE) break;
-      siov[siov_cnt].iov_base  = (char*)buf.c_str();
-      siov[siov_cnt].iov_len   = buf.length();
-      siov_len                += buf.length();
-      siov_cnt++;
+  // If we only have one element in the sendbuffer use write.
+  if (_sndBuf.size() == 1) {
+    data_len = _sndBuf.back().length();
+    ret = write(_fd, _sndBuf.back().c_str(), data_len);
+
+    if (ret == -1) {
+      DLOG(INFO) << GetIP() << ": write flush error: " << strerror(errno);
+    } else if ((unsigned int)ret < data_len) {
+      PruneSendBufferBytes(ret);
+      DLOG(INFO) << GetIP() << ": Could not write() entire buffer, wrote " << ret << " of " << data_len << " bytes.";
+    } else {
+      _sndBuf.clear();
     }
 
-    _sndBufLock.unlock();
+    return ret;
+  }
+
+  // If we have multiple items, use writev to write
+  // IOVEC_SIZE chunks of _sndBuf at one time.
+  for (unsigned int i = 0; i <= (_sndBuf.size() / IOVEC_SIZE); i++) {
+    struct iovec siov[IOVEC_SIZE];
+    size_t siov_cnt = 0;
+    data_len = 0;
+
+    BOOST_FOREACH(const string& buf, _sndBuf) {
+      if (siov_cnt == IOVEC_SIZE) { break; }
+      siov[siov_cnt].iov_base  = (char*)buf.c_str();
+      siov[siov_cnt].iov_len   = buf.length();
+      data_len                += buf.length();
+      siov_cnt++;
+    }
 
     ret = writev(_fd, siov, siov_cnt);
 
     if (ret == -1) {
-      DLOG(INFO) << GetIP() << ": flush error: " << strerror(errno);
+      DLOG(INFO) << GetIP() << ": writev flush error: " << strerror(errno);
       break;
     }
 
-    if (ret < siov_len) {
+    if ((unsigned int)ret < data_len) {
       // Remove data that was written from _sndBuf.
       PruneSendBufferBytes(ret);
-      DLOG(INFO) << GetIP() << ": Could not write entire buffer, wrote " << ret << " of " << siov_len << " bytes.";
+      DLOG(INFO) << GetIP() << ": Could not writev() entire buffer, wrote " << ret << " of " << data_len << " bytes.";
       break;
     }
 

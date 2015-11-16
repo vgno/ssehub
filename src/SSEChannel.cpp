@@ -273,7 +273,7 @@ void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
   deque<string> events = _cache_adapter->GetEventsSinceId(lastId);
 
   BOOST_FOREACH(const string& event, events) {
-    client->Send(event);
+    client->Send(event, SND_NO_FLUSH);
   }
 }
 
