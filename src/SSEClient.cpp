@@ -63,7 +63,6 @@ size_t SSEClient::PruneSendBufferBytes(size_t bytes) {
       *it = (*it).substr(used_here, (*it).length()-used_here);
 
       if (i > 1) {
-        LOG(INFO) << "Will not delete entire vector.";
         _sndBuf.erase(_sndBuf.begin(), it);
       }
 
@@ -80,7 +79,7 @@ size_t SSEClient::PruneSendBufferItems(size_t items) {
   vector<string>::iterator it;
 
   if (items > _sndBuf.size()) {
-    LOG(ERROR) << "Something bad happened: Trying to remove more items than present in _sndBuf.";
+    LOG(ERROR) << "PruneSendBufferItems " << "items: " << items << " _sndBuf.size(): " << _sndBuf.size();;
     _sndBuf.clear();
     return 0;
   }
