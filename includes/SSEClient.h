@@ -54,7 +54,8 @@ class SSEClient {
     vector<SubscriptionElement> _subscriptions;
     boost::mutex _sndBufLock;
     boost::shared_ptr<HTTPRequest> m_httpReq;
-    size_t PruneSendBuffer(size_t bytes);
+    size_t PruneSendBufferBytes(size_t bytes);
+    size_t PruneSendBufferItems(size_t items);
     const string GetSSEField(const string& data, const string& fieldName);
 };
 
