@@ -67,6 +67,9 @@ SSEChannel::~SSEChannel() {
   CleanupThreads();
 }
 
+/*
+  Initialize the configured cacheadapter for this channel
+*/
 void SSEChannel::InitializeCache() {
   const string adapter = _config.cacheAdapter;
   if (adapter == "redis") {
@@ -313,7 +316,7 @@ void SSEChannel::CleanupMain() {
         client->MarkAsDead();
         INC_LONG(_stats.num_disconnects);
       } else if (t_events[i].events & EPOLLERR) {
-        // If an error occours on a client socket, just drop the connection.
+        // If an error occurs on a client socket, just drop the connection.
         DLOG(INFO) << "Channel " << _config.id << ": Error on client socket: " << strerror(errno);
         client->MarkAsDead();
         INC_LONG(_stats.num_errors);
