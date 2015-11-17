@@ -80,7 +80,9 @@ void SSEChannel::InitializeCache() {
     _cache_adapter = new LevelDB(_config);
   }
 
-  _stats.num_cached_events = _cache_adapter->GetSizeOfCachedEvents();
+  if (_cache_adapter) {
+    _stats.num_cached_events = _cache_adapter->GetSizeOfCachedEvents();
+  }
 }
 
 /**
@@ -216,7 +218,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
     client->Destroy();
     return;
   }
-  
+
   INC_LONG(_stats.num_connects);
 
   // Add client to handler thread in a round-robin fashion.
