@@ -11,9 +11,9 @@ LimitAS=infinity
 LimitNOFILE=325888
 LimitNPROC=325888
 LimitCORE=infinity
-WorkingDirectory=/usr/bin/ssehub -config /etc/ssehub/config
+WorkingDirectory=/usr/bin/ssehub --config /etc/ssehub/config.json
 User=ssehub
-group=ssehub
+Group=ssehub
 Restart=always
 
 [Install]
