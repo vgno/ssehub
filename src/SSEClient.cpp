@@ -51,14 +51,13 @@ void SSEClient::Destroy() {
  Cut off @param bytes from our internal sendbuffer.
  @param bytes Number of bytes to cut off.
 */
-size_t SSEClient::PruneSendBufferBytes(size_t bytes) {
+size_t SSEClient::_prune_sendbuffer_bytes(size_t bytes) {
   int bytes_used = 0;
   int i = 0;
 
   for (vector<string>::iterator it = _sndBuf.begin(); it != _sndBuf.end(); it++, i++) {
     if ((bytes_used + (*it).length()) > bytes) {
       int used_here = bytes-bytes_used;
-
       *it = (*it).substr(used_here, (*it).length()-used_here);
 
       if (i > 1) {
@@ -67,17 +66,22 @@ size_t SSEClient::PruneSendBufferBytes(size_t bytes) {
 
       break;
     }
+
     bytes_used += (*it).length();
   }
 
   return _sndBuf.size();
 }
 
-size_t SSEClient::PruneSendBufferItems(size_t items) {
+/*
+ Cut off @param items from our internal sendbuffer.
+ @param items Number of items to cut off.
+*/
+size_t SSEClient::_prune_sendbuffer_items(size_t items) {
   vector<string>::iterator it;
 
   if (items > _sndBuf.size()) {
-    LOG(ERROR) << "PruneSendBufferItems " << "items: " << items << " _sndBuf.size(): " << _sndBuf.size();;
+    LOG(ERROR) << "_prune_sendbuffer_items " << "items: " << items << " _sndBuf.size(): " << _sndBuf.size();;
     _sndBuf.clear();
     return 0;
   }
@@ -89,37 +93,18 @@ size_t SSEClient::PruneSendBufferItems(size_t items) {
   return _sndBuf.size();
 }
 
-int SSEClient::Flush() {
-  int ret;
-  size_t data_len = 0;
-
-  if (_sndBuf.size() < 1) return 0;
-
-  boost::mutex::scoped_lock lock(_sndBufLock);
-
-  // If we only have one element in the sendbuffer use write.
-  if (_sndBuf.size() == 1) {
-    data_len = _sndBuf.back().length();
-    ret = write(_fd, _sndBuf.back().c_str(), data_len);
-
-    if (ret == -1) {
-      DLOG(INFO) << GetIP() << ": write flush error: " << strerror(errno);
-    } else if ((unsigned int)ret < data_len) {
-      PruneSendBufferBytes(ret);
-      DLOG(INFO) << GetIP() << ": Could not write() entire buffer, wrote " << ret << " of " << data_len << " bytes.";
-    } else {
-      _sndBuf.clear();
-    }
-
-    return ret;
-  }
+/*
+  Try to write all elements in the sendbuffer using writev().
+*/
+int SSEClient::_writev_sndbuf() {
+  int ret = 0;
 
   // If we have multiple items, use writev to write
-  // IOVEC_SIZE chunks of _sndBuf at one time.
+  // IOVEC_SIZE chunks of _sndBuf.
   for (unsigned int i = 0; i <= (_sndBuf.size() / IOVEC_SIZE); i++) {
     struct iovec siov[IOVEC_SIZE];
     size_t siov_cnt = 0;
-    data_len = 0;
+    size_t data_len = 0;
 
     BOOST_FOREACH(const string& buf, _sndBuf) {
       if (siov_cnt == IOVEC_SIZE) { break; }
@@ -131,23 +116,62 @@ int SSEClient::Flush() {
 
     ret = writev(_fd, siov, siov_cnt);
 
-    if (ret == -1) {
+    if (ret <= 0) {
       DLOG(INFO) << GetIP() << ": writev flush error: " << strerror(errno);
       break;
     }
 
     if ((unsigned int)ret < data_len) {
       // Remove data that was written from _sndBuf.
-      PruneSendBufferBytes(ret);
+      _prune_sendbuffer_bytes(ret);
       DLOG(INFO) << GetIP() << ": Could not writev() entire buffer, wrote " << ret << " of " << data_len << " bytes.";
       break;
     }
 
     // Remove sent elements from _sndBuf.
-    PruneSendBufferItems(siov_cnt);
+    _prune_sendbuffer_items(siov_cnt);
   }
 
   return ret;
+}
+
+/*
+  Write single element in the send buffer using write().
+*/
+int SSEClient::_write_sndbuf() {
+  int ret = 0;
+  size_t data_len = 0;
+
+  data_len = _sndBuf.front().length();
+  ret = write(_fd, _sndBuf.front().c_str(), data_len);
+
+  if (ret <= 0) {
+    DLOG(INFO) << GetIP() << ": write flush error: " << strerror(errno);
+  } else if ((unsigned int)ret < data_len) {
+    _prune_sendbuffer_bytes(ret);
+    DLOG(INFO) << GetIP() << ": Could not write() entire buffer, wrote " << ret << " of " << data_len << " bytes.";
+  } else {
+    _sndBuf.clear();
+  }
+
+  return ret;
+}
+
+/*
+ Flush data in the sendbuffer.
+*/
+int SSEClient::Flush() {
+  boost::mutex::scoped_lock lock(_sndBufLock);
+
+  if (_sndBuf.size() < 1) {
+    return 0;
+  }
+
+  if (_sndBuf.size() == 1) {
+    return _write_sndbuf();
+  }
+
+  return _writev_sndbuf();
 }
 
 /**
@@ -175,12 +199,11 @@ size_t SSEClient::Read(void* buf, int len) {
 }
 
 /**
-
   Destructor.
 */
 SSEClient::~SSEClient() {
   DLOG(INFO) << "Destructor called for client with IP: " << GetIP();
-  if (!_dead) close(_fd);
+  if (!IsDead()) close(_fd);
 }
 
 /**
@@ -200,28 +223,48 @@ const string SSEClient::GetIP() {
   return ip;
 }
 
+/*
+  Get clients sockaddr.
+*/
 uint32_t SSEClient::GetSockAddr() {
   return _csin.sin_addr.s_addr;
 }
 
+/*
+ Get the HTTPRequest the client was initiated with.
+*/
 HTTPRequest* SSEClient::GetHttpReq() {
   return m_httpReq.get();
 }
 
+/*
+  Delete the stored initial HTTPRequest.
+*/
 void SSEClient::DeleteHttpReq() {
   m_httpReq.reset();
 }
 
+/*
+ Mark client as dead and ready for removal.
+*/
 void SSEClient::MarkAsDead() {
   _dead = true;
   close(_fd);
 }
 
+/*
+ Returns wether this client is dead or not.
+*/
 bool SSEClient::IsDead() {
   return _dead;
 }
 
-const string SSEClient::GetSSEField(const string& data, const string& fieldName) {
+/*
+ Extract SSE-field from data.
+ @param data Search string.
+ @param fieldName field to extract.
+*/
+const string SSEClient::_get_sse_field(const string& data, const string& fieldName) {
   size_t field_pos = data.find(fieldName + ": ");
   size_t field_val_offset;
   string field_val;
@@ -239,6 +282,11 @@ const string SSEClient::GetSSEField(const string& data, const string& fieldName)
   return field_val;
 }
 
+/*
+ Check if client is subscribed to a certain event.
+ @param key Subscription key.
+ @param type Subscription type.
+*/
 bool SSEClient::isSubscribed(const string key, SubscriptionType type) {
  BOOST_FOREACH(const SubscriptionElement& subscription, _subscriptions) {
     if (subscription.type == type && (subscription.key.compare(0, subscription.key.length(), key) == 0)) {
@@ -249,6 +297,11 @@ bool SSEClient::isSubscribed(const string key, SubscriptionType type) {
  return false;
 }
 
+/*
+  Subscripe to a certain event and type.
+  @param key Subscription key.
+  @param type Subscription type.
+*/
 void SSEClient::Subscribe(const string key, SubscriptionType type) {
   SubscriptionElement subscription;
   subscription.key  = key;
@@ -258,6 +311,10 @@ void SSEClient::Subscribe(const string key, SubscriptionType type) {
   _subscriptions.push_back(subscription);
 }
 
+/*
+  Check if data is allowed to pass our subscriptions.
+  @param data Buffer to validate.
+*/
 bool SSEClient::isFilterAcceptable(const string& data) {
   // No filters defined.
   if (_subscriptions.size() < 1) return true;
@@ -270,13 +327,13 @@ bool SSEClient::isFilterAcceptable(const string& data) {
 
   // Validate id filters if we have any.
   if (_isIdFiltered) {
-    string eventId = GetSSEField(data, "id");
+    string eventId = _get_sse_field(data, "id");
     if (eventId.empty() || !isSubscribed(eventId, SUBSCRIPTION_ID)) return false;
   }
 
   // Validate event filters if we have any.
   if (_isEventFiltered) {
-    string eventType = GetSSEField(data, "event");
+    string eventType = _get_sse_field(data, "event");
     if (eventType.empty() || !isSubscribed(eventType, SUBSCRIPTION_EVENT_TYPE)) return false;
   }
 
