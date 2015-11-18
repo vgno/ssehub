@@ -52,15 +52,32 @@ void SSEClient::Destroy() {
  @param bytes Number of bytes to cut off.
 */
 size_t SSEClient::_prune_sendbuffer_bytes(size_t bytes) {
-  int bytes_used = 0;
-  int i = 0;
+  size_t bytes_used = 0, total_bytes = 0;
+  unsigned int i = 0;
 
+  // Return if requested bytes to remove is less than 1.
+  if (bytes < 1) return 0;
+
+  // Count total number of string bytes in _sndBuf.
+  for (vector<string>::iterator it = _sndBuf.begin();
+      it != _sndBuf.end(); total_bytes += it->length(), it++);
+
+  // If requested bytes to remove is equal to or more than actual bytes present in _sndBuf clear it.
+  if (bytes >= total_bytes) {
+    _sndBuf.clear();
+    return 0;
+  }
+
+  // Loop over _sndBuf and remove requested bytes.
   for (vector<string>::iterator it = _sndBuf.begin(); it != _sndBuf.end(); it++, i++) {
-    if ((bytes_used + (*it).length()) > bytes) {
-      int used_here = bytes-bytes_used;
-      *it = (*it).substr(used_here, (*it).length()-used_here);
 
-      if (i > 1) {
+    if ((bytes_used + it->length()) > bytes) {
+      size_t used_here = bytes-bytes_used;
+      size_t rem_bytes = it->length() - used_here;
+
+      *it = it->substr(used_here, rem_bytes);
+
+      if (i > 0) {
         _sndBuf.erase(_sndBuf.begin(), it);
       }
 
@@ -70,6 +87,7 @@ size_t SSEClient::_prune_sendbuffer_bytes(size_t bytes) {
     bytes_used += (*it).length();
   }
 
+  // Return elements present in _sndBuf after removal.
   return _sndBuf.size();
 }
 
@@ -80,8 +98,8 @@ size_t SSEClient::_prune_sendbuffer_bytes(size_t bytes) {
 size_t SSEClient::_prune_sendbuffer_items(size_t items) {
   vector<string>::iterator it;
 
+  // If requested items to remove is more than actual present in _sndBuf clear it.
   if (items > _sndBuf.size()) {
-    LOG(ERROR) << "_prune_sendbuffer_items " << "items: " << items << " _sndBuf.size(): " << _sndBuf.size();;
     _sndBuf.clear();
     return 0;
   }
@@ -90,6 +108,7 @@ size_t SSEClient::_prune_sendbuffer_items(size_t items) {
   it += items;
 
   _sndBuf.erase(_sndBuf.begin(), it);
+
   return _sndBuf.size();
 }
 
@@ -182,7 +201,7 @@ int SSEClient::Send(const string &data, bool flush) {
   if (!isFilterAcceptable(data)) return 0;
 
   _sndBufLock.lock();
-  _sndBuf.push_back(boost::move(data));
+  _sndBuf.push_back(data);
   _sndBufLock.unlock();
 
   if (flush) Flush();
