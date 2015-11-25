@@ -50,14 +50,12 @@ class SSEClient {
     bool _dead;
     bool _isEventFiltered;
     bool _isIdFiltered;
-    vector<string> _sndBuf;
+    string _sndBuf;
     vector<SubscriptionElement> _subscriptions;
     boost::mutex _sndBufLock;
     boost::shared_ptr<HTTPRequest> m_httpReq;
     size_t _prune_sendbuffer_bytes(size_t bytes);
-    size_t _prune_sendbuffer_items(size_t items);
     int _write_sndbuf();
-    int _writev_sndbuf();
     const string _get_sse_field(const string& data, const string& fieldName);
 };
 
