@@ -119,6 +119,15 @@ bool AmqpInputSource::Connect() {
     Reconnect(5);
   }
 
+  // Consume.
+  amqp_basic_consume(amqpConn, 1, amqpQueueName, amqp_empty_bytes, 0, 1, 0, amqp_empty_table);
+  rpc_ret = amqp_get_rpc_reply(amqpConn);
+
+  if (rpc_ret.reply_type != AMQP_RESPONSE_NORMAL) {
+    LOG(ERROR) << "Failed to consume AMQP queue, trying to reconnect in 5 seconds.";
+    Reconnect(5);
+  }
+
   LOG(INFO) << "Connected to AMQP server " << host << ":" << port << ".";
 
   return true;
@@ -132,22 +141,15 @@ void AmqpInputSource::Consume() {
     amqp_envelope_t envelope;
     amqp_rpc_reply_t ret;
 
-    amqp_basic_consume(amqpConn, 1, amqpQueueName, amqp_empty_bytes, 0, 1, 0, amqp_empty_table);
-    ret = amqp_get_rpc_reply(amqpConn);
-
     // Free up memory pool.
     amqp_maybe_release_buffers(amqpConn);
 
-    if (ret.reply_type != AMQP_RESPONSE_NORMAL) {
-      LOG(ERROR) << "Failed to consume AMQP queue, trying to reconnect in 5 seconds.";
-      Reconnect(5);
-      continue;
-    }
-
+    // Consume message.
     ret = amqp_consume_message(amqpConn, &envelope, NULL, 0);
 
     if (ret.reply_type != AMQP_RESPONSE_NORMAL) {
-      LOG(ERROR) << "Error consuming message.";
+      LOG(ERROR) << "Error consuming message, retrying in 5 seconds.";
+      Reconnect(5);
     } else {
      string msg;
      msg.insert(0, (const char*)envelope.message.body.bytes, envelope.message.body.len);
