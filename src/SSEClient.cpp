@@ -52,106 +52,14 @@ void SSEClient::Destroy() {
  @param bytes Number of bytes to cut off.
 */
 size_t SSEClient::_prune_sendbuffer_bytes(size_t bytes) {
-  size_t bytes_used = 0, total_bytes = 0;
-  unsigned int i = 0;
 
-  // Return if requested bytes to remove is less than 1.
-  if (bytes < 1) return 0;
+  if (_sndBuf.length() < 1) return 0;
+  if (bytes > _sndBuf.size()) _sndBuf.clear();
 
-  // Count total number of string bytes in _sndBuf.
-  for (vector<string>::iterator it = _sndBuf.begin();
-      it != _sndBuf.end(); total_bytes += it->length(), it++);
-
-  // If requested bytes to remove is equal to or more than actual bytes present in _sndBuf clear it.
-  if (bytes >= total_bytes) {
-    _sndBuf.clear();
-    return 0;
-  }
-
-  // Loop over _sndBuf and remove requested bytes.
-  for (vector<string>::iterator it = _sndBuf.begin(); it != _sndBuf.end(); it++, i++) {
-
-    if ((bytes_used + it->length()) > bytes) {
-      size_t used_here = bytes-bytes_used;
-      size_t rem_bytes = it->length() - used_here;
-
-      *it = it->substr(used_here, rem_bytes);
-
-      if (i > 0) {
-        _sndBuf.erase(_sndBuf.begin(), it);
-      }
-
-      break;
-    }
-
-    bytes_used += (*it).length();
-  }
+  _sndBuf = _sndBuf.substr(bytes, _sndBuf.length() - bytes);
 
   // Return elements present in _sndBuf after removal.
-  return _sndBuf.size();
-}
-
-/*
- Cut off @param items from our internal sendbuffer.
- @param items Number of items to cut off.
-*/
-size_t SSEClient::_prune_sendbuffer_items(size_t items) {
-  vector<string>::iterator it;
-
-  // If requested items to remove is more than actual present in _sndBuf clear it.
-  if (items > _sndBuf.size()) {
-    _sndBuf.clear();
-    return 0;
-  }
-
-  it  = _sndBuf.begin();
-  it += items;
-
-  _sndBuf.erase(_sndBuf.begin(), it);
-
-  return _sndBuf.size();
-}
-
-/*
-  Try to write all elements in the sendbuffer using writev().
-*/
-int SSEClient::_writev_sndbuf() {
-  int ret = 0;
-
-  // If we have multiple items, use writev to write
-  // IOVEC_SIZE chunks of _sndBuf.
-  for (unsigned int i = 0; i <= (_sndBuf.size() / IOVEC_SIZE); i++) {
-    struct iovec siov[IOVEC_SIZE];
-    size_t siov_cnt = 0;
-    size_t data_len = 0;
-
-    BOOST_FOREACH(const string& buf, _sndBuf) {
-      if (siov_cnt == IOVEC_SIZE) { break; }
-      siov[siov_cnt].iov_base  = (char*)buf.c_str();
-      siov[siov_cnt].iov_len   = buf.length();
-      data_len                += buf.length();
-      siov_cnt++;
-    }
-
-    ret = writev(_fd, siov, siov_cnt);
-
-    if (ret <= 0) {
-      DLOG(INFO) << GetIP() << ": writev flush error: " << strerror(errno);
-      break;
-    }
-
-    if ((unsigned int)ret < data_len) {
-      // Remove data that was written from _sndBuf.
-      _prune_sendbuffer_bytes(ret);
-      DLOG(INFO) << GetIP() << ": Could not writev() entire buffer, wrote " << ret << " of " << data_len << " bytes.";
-      break;
-    }
-
-    // Remove sent elements from _sndBuf.
-    _prune_sendbuffer_items(siov_cnt);
-  }
-
-  return ret;
+  return _sndBuf.length();
 }
 
 /*
@@ -159,16 +67,15 @@ int SSEClient::_writev_sndbuf() {
 */
 int SSEClient::_write_sndbuf() {
   int ret = 0;
-  size_t data_len = 0;
 
-  data_len = _sndBuf.front().length();
-  ret = write(_fd, _sndBuf.front().c_str(), data_len);
+  if (_sndBuf.length() < 1) return 0;
+  ret = write(_fd, _sndBuf.c_str(), _sndBuf.length());
 
   if (ret <= 0) {
     DLOG(INFO) << GetIP() << ": write flush error: " << strerror(errno);
-  } else if ((unsigned int)ret < data_len) {
+  } else if ((unsigned int)ret < _sndBuf.length()) {
     _prune_sendbuffer_bytes(ret);
-    DLOG(INFO) << GetIP() << ": Could not write() entire buffer, wrote " << ret << " of " << data_len << " bytes.";
+    DLOG(INFO) << GetIP() << ": Could not write() entire buffer, wrote " << ret << " of " << _sndBuf.length() << " bytes.";
   } else {
     _sndBuf.clear();
   }
@@ -177,20 +84,11 @@ int SSEClient::_write_sndbuf() {
 }
 
 /*
- Flush data in the sendbuffer.
+cieved: " << msg;Flush data in the sendbuffer.
 */
 int SSEClient::Flush() {
   boost::mutex::scoped_lock lock(_sndBufLock);
-
-  if (_sndBuf.size() < 1) {
-    return 0;
-  }
-
-  if (_sndBuf.size() == 1) {
-    return _write_sndbuf();
-  }
-
-  return _writev_sndbuf();
+  return _write_sndbuf();
 }
 
 /**
@@ -201,11 +99,11 @@ int SSEClient::Send(const string &data, bool flush) {
   if (!isFilterAcceptable(data)) return 0;
 
   _sndBufLock.lock();
-  _sndBuf.push_back(data);
+  _sndBuf.append(data);
   _sndBufLock.unlock();
 
   if (flush) Flush();
-  return _sndBuf.size();
+  return _sndBuf.length();
 }
 
 /**
