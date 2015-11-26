@@ -323,6 +323,7 @@ void SSEChannel::CleanupMain() {
         client->MarkAsDead();
         INC_LONG(_stats.num_errors);
       } else if (t_events[i].events & EPOLLOUT) {
+        // Send data present in send buffer,
         DLOG(INFO) << client->GetIP() << ": EPOLLOUT, flushing send buffer.";
         client->Flush();
       }
