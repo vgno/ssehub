@@ -149,6 +149,7 @@ void AmqpInputSource::Consume() {
 
     if (ret.reply_type != AMQP_RESPONSE_NORMAL) {
       LOG(ERROR) << "Error consuming message, retrying in 5 seconds.";
+      amqp_destroy_envelope(&envelope);
       Reconnect(5);
     } else {
      string msg;
@@ -159,6 +160,7 @@ void AmqpInputSource::Consume() {
      if (event->compile()) {
        _server->Broadcast(event);
      } else {
+       LOG(ERROR) << "Invalid event recieved: " << msg;
        delete(event);
      }
     }
