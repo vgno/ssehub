@@ -21,6 +21,7 @@ using namespace std;
 SSEClientHandler::SSEClientHandler(int tid) {
   DLOG(INFO) << "SSEClientHandler constructor called " << "id: " << tid;
   _id = tid;
+  _connected_clients = 0;
 
   _processorthread = boost::thread(boost::bind(&SSEClientHandler::ProcessQueue, this));
 }
@@ -39,6 +40,7 @@ SSEClientHandler::~SSEClientHandler() {
 */
 void SSEClientHandler::AddClient(SSEClient* client) {
   _clientlist.push_back(SSEClientPtr(client));
+  _connected_clients++;
   DLOG(INFO) << "Client added to thread id: " << _id;
 }
 
@@ -55,12 +57,14 @@ void SSEClientHandler::ProcessQueue() {
     std::string msg;
     _msgqueue.WaitPop(msg);
 
+    boost::mutex::scoped_lock lock(_clientlist_lock);
     for (SSEClientPtrList::iterator it = _clientlist.begin(); it != _clientlist.end(); it++) {
       SSEClientPtr client = static_cast<SSEClientPtr&>(*it);
 
       if (client->IsDead()) {
         DLOG(INFO) << "Removing disconnected client from clienthandler.";
         it = _clientlist.erase(it);
+        _connected_clients--;
         continue;
       }
 
@@ -73,5 +77,5 @@ void SSEClientHandler::ProcessQueue() {
   Returns number of clients connected to this clienthandler thread.
 */
 size_t SSEClientHandler::GetNumClients() {
-  return _clientlist.size();
+  return _connected_clients;
 }

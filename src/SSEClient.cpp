@@ -6,7 +6,6 @@
 #include <boost/foreach.hpp>
 #include "SSEClient.h"
 #include "HTTPRequest.h"
-#include <sys/uio.h>
 
 /**
  Constructor.
@@ -84,7 +83,7 @@ int SSEClient::_write_sndbuf() {
 }
 
 /*
-cieved: " << msg;Flush data in the sendbuffer.
+  Flush data in the sendbuffer.
 */
 int SSEClient::Flush() {
   boost::mutex::scoped_lock lock(_sndBufLock);
