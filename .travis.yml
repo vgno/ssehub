@@ -9,6 +9,7 @@ addons:
     - libgoogle-glog-dev
     - libboost-dev
     - libleveldb-dev
+    - libboost-all-dev
     - libboost-system-dev
     - libboost-program-options-dev
     - libboost-thread-dev
