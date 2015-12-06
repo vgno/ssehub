@@ -17,5 +17,4 @@ addons:
     - libboost-test-dev
     - librabbitmq-dev
 script:
-  - make
-  - cd tests && make
+  - cd build && cmake .. && make
