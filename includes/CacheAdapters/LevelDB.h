@@ -9,10 +9,10 @@ class LevelDB : public CacheInterface {
     LevelDB(const ChannelConfig& config);
     ~LevelDB();
     void InitDB(const string& dbfile); 
-    void CacheEvent(SSEEvent* event);
+    void CacheEvent(SSEEvent& event);
     deque<string> GetEventsSinceId(string lastId);
     deque<string> GetAllEvents();
-    int GetSizeOfCachedEvents();
+    size_t GetSizeOfCachedEvents();
     const ChannelConfig& _config;
 
   private:
@@ -20,6 +20,5 @@ class LevelDB : public CacheInterface {
     leveldb_options_t* _options; 
     leveldb_writeoptions_t* _woptions;
     leveldb_readoptions_t* _roptions;
-    unsigned int _cachesize;
 };
 #endif

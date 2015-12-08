@@ -38,7 +38,7 @@ class SSEServer {
     const SSEChannelList& GetChannelList();
     SSEConfig* GetConfig();
     bool IsAllowedToPublish(SSEClient* client, const struct ChannelConfig& chConf);
-    bool Broadcast(SSEEvent* event);
+    bool Broadcast(SSEEvent& event);
 
   private:
     SSEConfig *_config;

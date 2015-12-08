@@ -155,13 +155,12 @@ void AmqpInputSource::Consume() {
      string msg;
      msg.insert(0, (const char*)envelope.message.body.bytes, envelope.message.body.len);
     
-     SSEEvent* event = new SSEEvent(msg);
+     SSEEvent event(msg);
 
-     if (event->compile()) {
+     if (event.compile()) {
        _server->Broadcast(event);
      } else {
        LOG(ERROR) << "Invalid event recieved: " << msg;
-       delete(event);
      }
     }
 

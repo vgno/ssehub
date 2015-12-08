@@ -9,7 +9,7 @@
     "enablePost": true
   },
   "amqp": {
-    "enabled": true,
+    "enabled": false,
     "host": "127.0.0.1",
     "port": 5672,
     "user": "guest",
@@ -25,9 +25,9 @@
     "storageDir": "/tmp"
   },
   "default": {
-    "enablePost": false,
-    "cacheAdapter": "leveldb",
-    "cacheLength": 500,
+    "enablePost": true,
+    "cacheAdapter": "memory",
+    "cacheLength": 2,
     "allowedOrigins":  "*",
     "restrictPublish": [
       "127.0.0.1"
@@ -36,8 +36,7 @@
   "channels": [
     {
         "path": "test",
-        "allowedOrigins": ["https://some.host"],
-        "cacheLength": 5
+        "allowedOrigins": ["https://some.host"]
     },
     {
         "path": "test2",
