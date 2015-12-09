@@ -26,6 +26,10 @@ add_executable( ssehub
 find_package( Glog REQUIRED )
 include_directories( ${Glog_INCLUDE_PATH} )
 
+# snappy
+find_package( Snappy REQUIRED )
+include_directories( ${Snappy_INCLUDE_DIR} )
+
 # leveldb
 find_package( LevelDB REQUIRED )
 include_directories( ${LevelDB_INCLUDE_PATH} )
@@ -47,6 +51,7 @@ include_directories ("${PROJECT_SOURCE_DIR}/includes" "${PROJECT_SOURCE_DIR}/lib
 
 target_link_libraries( ssehub ${CMAKE_THREAD_LIBS_INIT} )
 target_link_libraries( ssehub ${Glog_LIBRARIES} )
+target_link_libraries( ssehub ${Snappy_LIBRARIES} )
 target_link_libraries( ssehub ${LevelDB_LIBRARIES} )
 target_link_libraries( ssehub ${RabbitMQ_LIBRARIES} )
 target_link_libraries( ssehub ${Boost_LIBRARIES} )
