@@ -50,14 +50,14 @@ void LevelDB::InitDB(const string& dbfile) {
  Add event to cache.
  @patam event Pointer to SSEEvent to cache.
 **/
-void LevelDB::CacheEvent(SSEEvent* event) {
+void LevelDB::CacheEvent(SSEEvent& event) {
   char* err = NULL;
 
-  leveldb_put(_db, _woptions, event->getid().c_str(), event->getid().length()+1,
-      event->get().c_str(), event->get().length()+1, &err);
+  leveldb_put(_db, _woptions, event.getid().c_str(), event.getid().length()+1,
+      event.get().c_str(), event.get().length()+1, &err);
 
   if (err != NULL) {
-    LOG(ERROR) << "Failed to cache event with id " << event->getid() << ": " << err;
+    LOG(ERROR) << "Failed to cache event with id " << event.getid() << ": " << err;
     leveldb_free(err);
     return;
   }
@@ -143,11 +143,11 @@ deque<string> LevelDB::GetAllEvents() {
 /**
  Get number of events currently stored in the cache.
 **/
-int LevelDB::GetSizeOfCachedEvents() {
+size_t LevelDB::GetSizeOfCachedEvents() {
   leveldb_iterator_t* it;
   leveldb_readoptions_t* readopts;
   const leveldb_snapshot_t* snapshot;
-  int n_keys;
+  size_t n_keys;
 
   snapshot = leveldb_create_snapshot(_db);
   readopts = leveldb_readoptions_create();

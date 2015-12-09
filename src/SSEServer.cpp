@@ -37,9 +37,9 @@ SSEServer::~SSEServer() {
   Broadcasts event to channel.
   @param event Reference to SSEEvent to broadcast.
 **/
-bool SSEServer::Broadcast(SSEEvent* event) {
+bool SSEServer::Broadcast(SSEEvent& event) {
   SSEChannel* ch;
-  const string& chName = event->getpath();
+  const string& chName = event.getpath();
   
   ch = GetChannel(chName, _config->GetValueBool("server.allowUndefinedChannels"));
   if (ch == NULL) {
@@ -77,15 +77,15 @@ bool SSEServer::IsAllowedToPublish(SSEClient* client, const ChannelConfig& chCon
  @param req Pointer to HTTPRequest.
  **/
 void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
-  SSEEvent* event = new SSEEvent(req->GetPostData());
+  SSEEvent event(req->GetPostData());
   bool validEvent;
   const string& chName = req->GetPath().substr(1); 
 
   // Set the event path to the endpoint we recieved the POST on.
-  event->setpath(chName);
+  event.setpath(chName);
 
   // Validate the event.
-  validEvent = event->compile();
+  validEvent = event.compile();
 
   // Check if channel exist.
   SSEChannel* ch = GetChannel(chName);
@@ -96,14 +96,12 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
       if (!IsAllowedToPublish(client, _config->GetDefaultChannelConfig())) {
         HTTPResponse res(403);
         client->Send(res.Get());
-	delete event;
         return;
       }
 
       if (!validEvent) {
         HTTPResponse res(400);
         client->Send(res.Get());
-	delete event;
         return;
       }
 
@@ -112,7 +110,6 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
     } else {
       HTTPResponse res(404);
       client->Send(res.Get());
-      delete event;
       return;
     }
   } else {
@@ -120,14 +117,12 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
     if (!IsAllowedToPublish(client, ch->GetConfig())) {
       HTTPResponse res(403);
       client->Send(res.Get());
-      delete event;
       return;
     }
     
     if (!validEvent) {
       HTTPResponse res(400);
       client->Send(res.Get());
-      delete event;
       return;
     }
   }

@@ -19,7 +19,7 @@ struct ChannelConfig {
   std::vector<string>    allowedOrigins;
   std::vector<iprange_t> allowedPublishers;
   string                 cacheAdapter;
-  int                    cacheLength;
+  size_t                 cacheLength;
 };
 
 typedef std::map<const std::string, std::string> ConfigMap_t;

@@ -10,10 +10,10 @@ using namespace std;
 class Redis : public CacheInterface {
   public:
     Redis(const string key, const ChannelConfig& config);
-    void CacheEvent(SSEEvent* event);
+    void CacheEvent(SSEEvent& event);
     deque<string> GetEventsSinceId(string lastId);
     deque<string> GetAllEvents();
-    int GetSizeOfCachedEvents();
+    size_t GetSizeOfCachedEvents();
     const ChannelConfig& _config;
 
   private:

@@ -42,7 +42,7 @@ bool Redis::InitClient(RedisSyncClient& client)  {
   return true;
 }
 
-void Redis::CacheEvent(SSEEvent* event) {
+void Redis::CacheEvent(SSEEvent& event) {
   RedisValue result;
   boost::asio::io_service ioService;
   RedisSyncClient client(ioService);
@@ -52,29 +52,28 @@ void Redis::CacheEvent(SSEEvent* event) {
   }
 
   try {
-    result = client.command("HSET", _key, event->getid(), event->get());
-  } catch (const runtime_error& error) {
-    LOG(ERROR) << "Redis::CacheEvent: " << error.what();
-  }
+    result = client.command("HSET", _key, event.getid(), event.get());
+    if (result.isError()) {
+      LOG(ERROR) << "SET error: " << result.toString();
+    }
 
-  if (result.isError()) {
-    LOG(ERROR) << "SET error: " << result.toString();
-  }
-
-  result = client.command("HLEN", _key);
-  if (result.isError()) {
-    LOG(ERROR) << "HLEN error" << result.toString();
-  }
-  if (result.isOk()) {
-    if (result.toInt() > _config.cacheLength) {
-      result = client.command("HKEYS", _key);
-      if (result.isError()) {
-        LOG(ERROR) << "HKEYS error: " << result.toString();
-      }
-      if (result.isOk()) {
-        client.command("HDEL", _key, result.toArray().front().toString());
+    result = client.command("HLEN", _key);
+    if (result.isError()) {
+      LOG(ERROR) << "HLEN error" << result.toString();
+    }
+    if (result.isOk()) {
+      if ((size_t)result.toInt() > _config.cacheLength) {
+        result = client.command("HKEYS", _key);
+        if (result.isError()) {
+          LOG(ERROR) << "HKEYS error: " << result.toString();
+        }
+        if (result.isOk()) {
+          client.command("HDEL", _key, result.toArray().front().toString());
+        }
       }
     }
+  } catch (const runtime_error& error) {
+    LOG(ERROR) << "Redis::CacheEvent: " << error.what();
   }
 }
 
@@ -160,8 +159,8 @@ deque<string> Redis::GetAllEvents() {
   return events;
 }
 
-int Redis::GetSizeOfCachedEvents() {
-  int size = 0;
+size_t Redis::GetSizeOfCachedEvents() {
+  size_t size = 0;
   RedisValue result;
   boost::asio::io_service ioService;
   RedisSyncClient client(ioService);

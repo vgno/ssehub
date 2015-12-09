@@ -244,15 +244,13 @@ void SSEChannel::Broadcast(const string& data) {
   Broadcasts SSEvent to all connected clients.
   @param event Event to broadcast.
 */
-void SSEChannel::BroadcastEvent(SSEEvent* event) {
-  Broadcast(event->get());
+void SSEChannel::BroadcastEvent(SSEEvent& event) {
+  Broadcast(event.get());
   INC_LONG(_stats.num_broadcasted_events);
 
   //Add event to cache if it contains a id field.
-  if (!event->getid().empty()) {
+  if (!event.getid().empty()) {
     CacheEvent(event);
-  } else {
-    delete(event);
   }
 }
 
@@ -260,7 +258,7 @@ void SSEChannel::BroadcastEvent(SSEEvent* event) {
   Add event to cache.
   @param event Event to cache.
 */
-void SSEChannel::CacheEvent(SSEEvent* event) {
+void SSEChannel::CacheEvent(SSEEvent& event) {
   if (_cache_adapter) {
     _cache_adapter->CacheEvent(event);
     _stats.num_cached_events = _cache_adapter->GetSizeOfCachedEvents();

@@ -27,7 +27,6 @@ class SSEClientHandler;
 class HTTPRequest;
 class HTTPResponse;
 
-typedef boost::shared_ptr<SSEEvent> SSEEventPtr;
 typedef boost::shared_ptr<SSEClientHandler> ClientHandlerPtr;
 typedef vector<ClientHandlerPtr> ClientHandlerList;
 
@@ -47,8 +46,8 @@ class SSEChannel {
     ~SSEChannel();
     string GetId();
     void Broadcast(const string& data);
-    void BroadcastEvent(SSEEvent* event);
-    void CacheEvent(SSEEvent* event);
+    void BroadcastEvent(SSEEvent& event);
+    void CacheEvent(SSEEvent& event);
     void SendEventsSince(SSEClient* client, string lastId);
     void SendCache(SSEClient* client);
     const SSEChannelStats& GetStats();
