@@ -34,7 +34,7 @@ SSEServer::~SSEServer() {
 }
 
 /**
-  Broadcasts event to channel.
+  Broadcast event to channel.
   @param event Reference to SSEEvent to broadcast.
 **/
 bool SSEServer::Broadcast(SSEEvent& event) {

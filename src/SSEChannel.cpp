@@ -248,7 +248,7 @@ void SSEChannel::BroadcastEvent(SSEEvent& event) {
   Broadcast(event.get());
   INC_LONG(_stats.num_broadcasted_events);
 
-  //Add event to cache if it contains a id field.
+  // Add event to cache if it contains a id field.
   if (!event.getid().empty()) {
     CacheEvent(event);
   }
