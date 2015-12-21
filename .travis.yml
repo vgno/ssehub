@@ -1,5 +1,6 @@
 language: cpp
 dist: trusty
+sudio: required
 addons:
   apt:
     sources:
