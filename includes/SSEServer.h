@@ -53,6 +53,7 @@ class SSEServer {
     void InitSocket();
     void AcceptLoop();
     void ClientRouterLoop();
+    void UndefinedChannelsTTL();
     void PostHandler(SSEClient* client, HTTPRequest* req);
     void InitChannels();
     void RemoveClient(SSEClient* client);

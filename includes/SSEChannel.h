@@ -38,11 +38,12 @@ struct SSEChannelStats {
   ulong num_connects;
   ulong num_disconnects;
   uint  cache_size;
+  ulong last_broadcast;
 };
 
 class SSEChannel {
   public:
-    SSEChannel(ChannelConfig conf, string id);
+    SSEChannel(ChannelConfig conf, string id, bool undefined = false);
     ~SSEChannel();
     string GetId();
     void Broadcast(const string& data);
@@ -54,6 +55,7 @@ class SSEChannel {
     void AddClient(SSEClient* client, HTTPRequest* req);
     ulong GetNumClients();
     const ChannelConfig& GetConfig();
+    bool isUndefined();
 
   private:
     int _efd;
@@ -65,6 +67,7 @@ class SSEChannel {
     ClientHandlerList _clientpool;
     CacheInterface* _cache_adapter;
     bool _allow_all_origins;
+    bool _undefined;
     char _evs_preamble_data[2052];
 
     void InitializeCache();

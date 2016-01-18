@@ -75,6 +75,7 @@ void SSEStatsHandler::Update() {
     pt_element.put("total_connects", stat.num_connects);
     pt_element.put("total_disconnects", stat.num_disconnects);
     pt_element.put("client_errors", stat.num_errors);
+    pt_element.put("last_broadcast", stat.last_broadcast);
 
     channels.push_back(std::make_pair("", pt_element));
   }

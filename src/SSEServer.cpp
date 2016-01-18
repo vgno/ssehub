@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
+#include <sys/time.h>
 #include "Common.h"
 #include "SSEServer.h"
 #include "SSEClient.h"
@@ -149,6 +150,11 @@ void SSEServer::Run() {
 
   InitChannels();
 
+  // Disable undefinedChannelsTTL check if value is equal to 0
+  if (_config->GetValueInt("server.undefinedChannelsTTL") != 0) {
+    boost::thread(&SSEServer::UndefinedChannelsTTL, this);
+  }
+
   _routerthread = boost::thread(&SSEServer::ClientRouterLoop, this);
   AcceptLoop();
 }
@@ -210,7 +216,7 @@ SSEChannel* SSEServer::GetChannel(const string id, bool create) {
   }
 
   if (create) {
-    ch = new SSEChannel(_config->GetDefaultChannelConfig(), id);
+    ch = new SSEChannel(_config->GetDefaultChannelConfig(), id, true);
     _channels.push_back(SSEChannelPtr(ch));
   }
 
@@ -412,5 +418,27 @@ void SSEServer::ClientRouterLoop() {
         }
       }
     }
+  }
+}
+
+void SSEServer::UndefinedChannelsTTL() {
+  unsigned int limit  = _config->GetValueInt("server.undefinedChannelsTTL");
+  LOG(INFO) << "Initalizing undefined channels ttl with limit: " << limit;
+  while(1) {
+    unsigned long int now = time(NULL);
+    BOOST_FOREACH(SSEChannelPtr channel, _channels) {
+      if (channel->isUndefined() == true) {
+        unsigned int updateDiff = now-channel->GetStats().last_broadcast;
+        LOG(INFO) << "Diff: " << updateDiff;
+
+        if (updateDiff > limit) {
+            std::vector<SSEChannelPtr>::iterator position = std::find(_channels.begin(), _channels.end(), channel);
+            if (position != _channels.end()) {
+              _channels.erase(position);
+            }
+        }
+      }
+    }
+    usleep(100000);
   }
 }

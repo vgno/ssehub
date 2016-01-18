@@ -9,6 +9,7 @@
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
+#include <sys/time.h>
 
 using namespace std;
 extern int stop;
@@ -18,9 +19,11 @@ extern int stop;
   @param conf Pointer to SSEConfig instance holding our configuration.
   @param id Unique identifier for this channel.
 */
-SSEChannel::SSEChannel(ChannelConfig conf, string id) {
+SSEChannel::SSEChannel(ChannelConfig conf, string id, bool undefined) {
   _config = conf;
   _config.id = id;
+
+  _undefined = undefined;
 
   _efd = epoll_create1(0);
   LOG_IF(FATAL, _efd == -1) << "epoll_create1 failed.";
@@ -32,6 +35,7 @@ SSEChannel::SSEChannel(ChannelConfig conf, string id) {
   _stats.num_errors             = 0;
   _stats.num_cached_events      = 0;
   _stats.num_broadcasted_events = 0;
+  _stats.last_broadcast         = time(NULL);
   _stats.cache_size             = _config.cacheLength;
 
 
@@ -116,6 +120,13 @@ void SSEChannel::CleanupThreads() {
 */
 string SSEChannel::GetId() {
   return _config.id;
+}
+
+/**
+  Return true if the channel is an undefined channel
+*/
+bool SSEChannel::isUndefined() {
+  return _undefined;
 }
 
 /**
@@ -252,6 +263,8 @@ void SSEChannel::BroadcastEvent(SSEEvent& event) {
   if (!event.getid().empty()) {
     CacheEvent(event);
   }
+
+  _stats.last_broadcast = time(NULL);
 }
 
 /**

@@ -32,6 +32,7 @@ void SSEConfig::InitDefaults() {
  ConfigMap["server.pingInterval"]             = "5";
  ConfigMap["server.threadsPerChannel"]        = "5";
  ConfigMap["server.allowUndefinedChannels"]   = "true";
+ ConfigMap["server.undefinedChannelsTTL"]     = "0";
  ConfigMap["server.enablePost"]               = "false";
 
  ConfigMap["amqp.enabled"]                    = "false";
