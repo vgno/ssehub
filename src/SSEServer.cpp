@@ -429,7 +429,6 @@ void SSEServer::UndefinedChannelsTTL() {
     BOOST_FOREACH(SSEChannelPtr channel, _channels) {
       if (channel->isUndefined() == true) {
         unsigned int updateDiff = now-channel->GetStats().last_broadcast;
-        LOG(INFO) << "Diff: " << updateDiff;
 
         if (updateDiff > limit) {
             std::vector<SSEChannelPtr>::iterator position = std::find(_channels.begin(), _channels.end(), channel);
