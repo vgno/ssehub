@@ -31,6 +31,10 @@ SSEClientHandler::SSEClientHandler(int tid) {
 */
 SSEClientHandler::~SSEClientHandler() {
   DLOG(INFO) << "SSEClientHandler destructor called for " << "id: " << _id;
+  for (SSEClientPtrList::iterator it = _clientlist.begin(); it != _clientlist.end(); it++) {
+    _clientlist.erase(it);
+    _connected_clients--;
+  }
   pthread_cancel(_processorthread.native_handle());
 }
 
