@@ -67,7 +67,7 @@ SSEChannel::SSEChannel(ChannelConfig conf, string id, bool undefined) {
   Destructor.
 */
 SSEChannel::~SSEChannel() {
-  DLOG(INFO) << "SSEChannel destructor called.";
+  DLOG(INFO) << "SSEChannel destructor called for channel " << _config.id << ".";
   CleanupThreads();
 }
 
@@ -113,6 +113,9 @@ void SSEChannel::InitializeThreads() {
 void SSEChannel::CleanupThreads() {
   pthread_cancel(_pingthread.native_handle());
   pthread_cancel(_cleanupthread.native_handle());
+  for (ClientHandlerList::iterator it = _clientpool.begin(); it != _clientpool.end(); it++) {
+    _clientpool.erase(it);
+  }
 }
 
 /**
