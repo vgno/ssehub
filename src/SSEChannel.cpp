@@ -125,7 +125,7 @@ string SSEChannel::GetId() {
 */
 void SSEChannel::SetCorsHeaders(HTTPRequest* req, HTTPResponse& res) {
   // Set allowed headers for the EventSource IE polyfill
-  res.SetHeader("Access-Control-Allow-Headers", "X-Requested-With, Last-Event-ID");
+  res.SetHeader("Access-Control-Allow-Headers", "Accept, Cache-Control, X-Requested-With, Last-Event-ID");
 
   if (_allow_all_origins) {
     DLOG(INFO) << "All origins allowed.";
