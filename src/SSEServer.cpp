@@ -40,7 +40,7 @@ SSEServer::~SSEServer() {
 bool SSEServer::Broadcast(SSEEvent& event) {
   SSEChannel* ch;
   const string& chName = event.getpath();
-  
+
   ch = GetChannel(chName, _config->GetValueBool("server.allowUndefinedChannels"));
   if (ch == NULL) {
     LOG(ERROR) << "Discarding event recieved on invalid channel: " << chName;
@@ -79,7 +79,7 @@ bool SSEServer::IsAllowedToPublish(SSEClient* client, const ChannelConfig& chCon
 void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
   SSEEvent event(req->GetPostData());
   bool validEvent;
-  const string& chName = req->GetPath().substr(1); 
+  const string& chName = req->GetPath().substr(1);
 
   // Set the event path to the endpoint we recieved the POST on.
   event.setpath(chName);
@@ -119,7 +119,7 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
       client->Send(res.Get());
       return;
     }
-    
+
     if (!validEvent) {
       HTTPResponse res(400);
       client->Send(res.Get());
@@ -129,7 +129,7 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
 
   // Broacast the event.
   Broadcast(event);
-  
+
   // Event broadcasted OK.
   HTTPResponse res(200);
   client->Send(res.Get());
@@ -380,7 +380,7 @@ void SSEServer::ClientRouterLoop() {
 
           RemoveClient(client);
           continue;
-      } 
+      }
 
       if (!req->GetPath().empty()) {
         // Handle /stats endpoint.
@@ -392,7 +392,7 @@ void SSEServer::ClientRouterLoop() {
           res.SetBody("OK\n");
           client->Send(res.Get());
           RemoveClient(client);
-          continue;          
+          continue;
         }
 
         string chName = req->GetPath().substr(1);
