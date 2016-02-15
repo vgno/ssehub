@@ -1,10 +1,12 @@
 #include <sstream>
 #include <stdlib.h>
+#include <cstdlib>
 #include <exception>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
 #include <boost/any.hpp>
 #include <boost/optional.hpp>
@@ -69,7 +71,14 @@ bool SSEConfig::load(const char *file) {
   BOOST_FOREACH(ConfigMap_t::value_type &element, ConfigMap) {
     try {
   // Event broadcasted OK..
-      string val = pt.get<std::string>(element.first);
+      string envVar = boost::replace_all_copy(element.first, ".", "");
+      const char* env_p = getenv(envVar.c_str());
+      string val;
+      if (env_p != NULL) {
+        val = env_p;
+      } else {
+        val = pt.get<std::string>(element.first);
+      }
       ConfigMap[element.first] = val;
       DLOG(INFO) << element.first << " = " << ConfigMap[element.first];
     } catch (...) {}
