@@ -51,6 +51,7 @@ void SSEConfig::InitDefaults() {
 
  ConfigMap["default.cacheAdapter"]            = "redis";
  ConfigMap["default.cacheLength"]             = "500";
+ ConfigMap["default.allowedOrigins"]          = "*";
 }
 
 /**
@@ -63,9 +64,7 @@ bool SSEConfig::load(const char *file) {
   // Read config file.
   try {
     boost::property_tree::read_json(file, pt);
-  } catch (...) {
-    return false;
-  }
+  } catch (...) {}
 
   // Populate ConfigMap.
   BOOST_FOREACH(ConfigMap_t::value_type &element, ConfigMap) {
@@ -144,7 +143,7 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
   try {
     GetArray(DefaultAllowedOrigins, pt.get_child("default.allowedOrigins"));
   } catch(boost::property_tree::ptree_error& e) {
-    LOG(FATAL) << "Failed to fetch default allowedOrigins from config: " << e.what();
+    LOG(WARNING) << "No default allowedOrigins from config: " << e.what();
   }
 
   // Populate ChannelMap.

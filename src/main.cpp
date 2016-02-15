@@ -46,10 +46,7 @@ int main(int argc, char **argv) {
 
   std::string conf_path = vm["config"].as<std::string>();
   SSEConfig conf;
-  if (!conf.load(conf_path.c_str())) {
-    LOG(ERROR) << "Failed to parse config file: " << conf_path;
-    return 1;
-  }
+  conf.load(conf_path.c_str());
 
   sa.sa_handler = shutdown;
   sa.sa_flags   = 0;
