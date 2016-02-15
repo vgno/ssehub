@@ -29,7 +29,7 @@ SSEConfig::SSEConfig() {
 */
 void SSEConfig::InitDefaults() {
  ConfigMap["server.bindip"]                   = "0.0.0.0";
- ConfigMap["server.port"]                     = "8090";
+ ConfigMap["server.port"]                     = "8080";
  ConfigMap["server.logdir"]                   = "./";
  ConfigMap["server.pingInterval"]             = "5";
  ConfigMap["server.threadsPerChannel"]        = "5";
