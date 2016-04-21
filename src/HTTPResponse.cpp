@@ -40,8 +40,9 @@ const std::string HTTPResponse::Get() {
 
   try {
     m_headers.at("Connection");
+    m_headers.at("Content-Type");
 
-    if ((m_headers["Connection"].compare("close") == 0) && m_body.size() > 0) {
+    if ((m_headers["Content-Type"].compare("text/event-stream") != 0) && (m_headers["Connection"].compare("close") == 0) && m_body.size() > 0) {
       SetHeader("Content-Length", boost::lexical_cast<std::string>(m_body.size()));
     }
   } catch (...) {}
