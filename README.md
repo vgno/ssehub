@@ -41,6 +41,15 @@ To build issue the following command within the project root directory:
 docker build -t ssehub .
 ```
 
+# Offical docker image
+
+```
+docker pull quay.io/vgno/ssehub
+docker run -v ./config/:/ssehub/conf/ -p 8080:8080 quay.io/vgno/ssehub
+```
+
+[![Docker Repository on Quay](https://quay.io/repository/vgno/ssehub/status "Docker Repository on Quay")](https://quay.io/repository/vgno/ssehub)
+
 # Example configuration
 
 ```json
