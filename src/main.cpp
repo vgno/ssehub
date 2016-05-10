@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 
   if (vm.count("help")) {
     std::cout << desc << std::endl;
-    return 1;
+    return 0;
   }
 
   std::string conf_path = vm["config"].as<std::string>();
