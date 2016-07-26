@@ -60,10 +60,10 @@ docker run -v ./config/:/ssehub/conf/ -p 8080:8080 quay.io/vgno/ssehub
     "logdir": "./",
     "pingInterval": 5,
     "threadsPerChannel": 2,
-    "allowUndefinedChannels": "true"
+    "allowUndefinedChannels": true
   },
   "amqp": {
-    "enabled": "false",
+    "enabled": false,
     "host": "127.0.0.1",
     "port": 5672,
     "user": "guest",
@@ -135,7 +135,7 @@ curl -v -X POST http://127.0.0.1:8080/test \
 ```
 
 # Dynamic creation of channels
-If `allowUndefinedChannels` is set to true in the config the channel will be created when the first event is sent to the channel.
+If `allowUndefinedChannels` is set to `true` in the config the channel will be created when the first event is sent to the channel.
 
 # Cache adapters
 To request all events since a certain ID use the query parameter `lastEventId=<id>` or header `Last-Event-ID: <id>`.
