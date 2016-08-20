@@ -1,1 +1,9 @@
+# Configuration should be mounted as a volume
 conf/config.json
+
+# Init scripts not required for container
+initscripts
+
+# Built artifacts
+**/*.o
+ssehub
