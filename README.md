@@ -20,8 +20,8 @@ High performance SSE-server implementation written in C++.
 
 ```
 # Install dependencies (using apt in this example):
-apt-get install g++ make libgoogle-glog-dev libboost-dev libleveldb-dev \
-libboost-system-dev libboost-thread-dev librabbitmq-dev
+apt-get install g++ make libgoogle-glog-dev libboost-dev libboost-system-dev \
+libboost-thread-dev libboost-program-options-dev librabbitmq-dev libleveldb-dev
 
 # Checkout sourcecode:
 git clone git@github.com:vgno/ssehub.git
