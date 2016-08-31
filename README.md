@@ -59,6 +59,7 @@ docker run -v ./config/:/ssehub/conf/ -p 8080:8080 quay.io/vgno/ssehub
     "bind-ip": "0.0.0.0",
     "logdir": "./",
     "pingInterval": 5,
+    "pingEvent": false,
     "threadsPerChannel": 2,
     "allowUndefinedChannels": true
   },

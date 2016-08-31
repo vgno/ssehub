@@ -4,6 +4,7 @@
     "bind-ip": "0.0.0.0",
     "logdir": "./",
     "pingInterval": 5,
+    "pingEvent": true,
     "threadsPerChannel": 2,
     "allowUndefinedChannels": true,
     "enablePost": true
