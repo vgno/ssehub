@@ -32,6 +32,7 @@ void SSEConfig::InitDefaults() {
  ConfigMap["server.port"]                     = "8080";
  ConfigMap["server.logdir"]                   = "./";
  ConfigMap["server.pingInterval"]             = "5";
+ ConfigMap["server.pingEvent"]                = "false";
  ConfigMap["server.threadsPerChannel"]        = "5";
  ConfigMap["server.allowUndefinedChannels"]   = "true";
  ConfigMap["server.enablePost"]               = "false";

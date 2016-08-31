@@ -336,8 +336,15 @@ void SSEChannel::CleanupMain() {
   Sends a ping to all clients connected to this channel.
 */
 void SSEChannel::Ping() {
+  string pingMsg;
+  if (_config.server->GetValueBool("server.pingEvent")) {
+    pingMsg = "event: ping\ndata:\n\n";
+  } else {
+    pingMsg = ":\n\n";
+  }
+
   while(!stop) {
-    Broadcast("event: ping\n\n");
+    Broadcast(pingMsg);
     sleep(_config.server->GetValueInt("server.pingInterval"));
   }
 }
