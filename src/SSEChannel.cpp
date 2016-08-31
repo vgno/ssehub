@@ -337,7 +337,7 @@ void SSEChannel::CleanupMain() {
 */
 void SSEChannel::Ping() {
   while(!stop) {
-    Broadcast("event:ping\n\n");
+    Broadcast("event: ping\n\n");
     sleep(_config.server->GetValueInt("server.pingInterval"));
   }
 }
