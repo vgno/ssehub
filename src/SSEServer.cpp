@@ -167,7 +167,7 @@ void SSEServer::InitSocket() {
   LOG_IF(FATAL, _serversocket == -1) << "Error creating listening socket.";
 
   /* Reuse port and address. */
-  setsockopt(_serversocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on));
+  setsockopt(_serversocket, SOL_SOCKET, SO_REUSEPORT | SO_REUSEADDR, (const char*)&on, sizeof(on));
 
   memset((char*)&_sin, '\0', sizeof(_sin));
   _sin.sin_family  = AF_INET;
