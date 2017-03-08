@@ -15,7 +15,7 @@
 SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   _fd = fd;
   _dead = false;
- 
+
    memcpy(&_csin, csin, sizeof(struct sockaddr_in));
   DLOG(INFO) << "Initialized client with IP: " << GetIP();
 
@@ -51,13 +51,16 @@ void SSEClient::Destroy() {
  @param bytes Number of bytes to cut off.
 */
 size_t SSEClient::_prune_sendbuffer_bytes(size_t bytes) {
+  if (_sndBuf.length() < 1) {
+    return 0;
+  }
 
-  if (_sndBuf.length() < 1) return 0;
-  if (bytes > _sndBuf.size()) _sndBuf.clear();
+  if (bytes >= _sndBuf.length()) {
+    _sndBuf.clear();
+    return 0;
+  }
 
-  _sndBuf = _sndBuf.substr(bytes, _sndBuf.length() - bytes);
-
-  // Return elements present in _sndBuf after removal.
+  _sndBuf = _sndBuf.substr(bytes, string::npos);
   return _sndBuf.length();
 }
 
