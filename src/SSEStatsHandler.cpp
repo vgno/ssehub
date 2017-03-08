@@ -82,6 +82,7 @@ void SSEStatsHandler::Update() {
   boost::posix_time::time_duration uptime;
   uptime = boost::posix_time::seconds((int)time(NULL) - _startTime);
 
+  pt.put("global.pid", getpid());
   pt.put("global.uptime", boost::posix_time::to_simple_string(uptime));
   pt.put("global.clients", totalClients);
   pt.put("global.broadcasted_events", totalEvents);
