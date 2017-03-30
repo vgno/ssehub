@@ -48,10 +48,10 @@ void AmqpInputSource::Disconnect() {
  Reconnect AMQP server.
  @param delay Time to wait between disconnect and connect.
 */
-bool AmqpInputSource::Reconnect(int delay) {
+void AmqpInputSource::Reconnect(int delay) {
    Disconnect();
    sleep(delay);
-   return Connect();
+   Connect();
 }
 
 /**
@@ -93,7 +93,7 @@ bool AmqpInputSource::Connect() {
 
   if (rpc_ret.reply_type != AMQP_RESPONSE_NORMAL) {
     LOG(ERROR) << "Failed to open AMQP channel, trying to reconnect in 5 seconds.";
-    return Reconnect(5);
+    Reconnect(5);
   }
 
   // Declare queue.
@@ -102,7 +102,7 @@ bool AmqpInputSource::Connect() {
 
   if (amqp_get_rpc_reply(amqpConn).reply_type != AMQP_RESPONSE_NORMAL) {
     LOG(ERROR) << "Failed to declare queue, trying to reconnect in 5 seconds.";
-    return Reconnect(5);
+    Reconnect(5);
   }
 
   amqpQueueName = amqp_bytes_malloc_dup(r->queue);
@@ -116,7 +116,7 @@ bool AmqpInputSource::Connect() {
 
   if (rpc_ret.reply_type != AMQP_RESPONSE_NORMAL) {
     LOG(ERROR) << "Failed to bind to AMQP queue, trying to reconnect in 5 seconds.";
-    return Reconnect(5);
+    Reconnect(5);
   }
 
   // Consume.
@@ -125,7 +125,7 @@ bool AmqpInputSource::Connect() {
 
   if (rpc_ret.reply_type != AMQP_RESPONSE_NORMAL) {
     LOG(ERROR) << "Failed to consume AMQP queue, trying to reconnect in 5 seconds.";
-    return Reconnect(5);
+    Reconnect(5);
   }
 
   LOG(INFO) << "Connected to AMQP server " << host << ":" << port << ".";
