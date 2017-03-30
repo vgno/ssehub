@@ -23,6 +23,6 @@ class AmqpInputSource : public SSEInputSource {
 
     bool Connect();
     void Disconnect();
-    bool Reconnect(int delay);
+    void Reconnect(int delay);
     void Consume();
 };
