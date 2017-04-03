@@ -48,6 +48,11 @@ void SSEConfig::InitDefaults() {
  ConfigMap["redis.port"]                      = "6379";
  ConfigMap["redis.prefix"]                    = "ssehub";
 
+ ConfigMap["statsd.enabled"]                  = "false";
+ ConfigMap["statsd.host"]                     = "127.0.0.1";
+ ConfigMap["statsd.port"]                     = "8125";
+ ConfigMap["statsd.namespace"]                = "ssehub";
+
  ConfigMap["leveldb.storageDir"]              = ".";
 
  ConfigMap["default.cacheAdapter"]            = "redis";

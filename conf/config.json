@@ -25,6 +25,11 @@
   "leveldb": {
     "storageDir": "/tmp"
   },
+  "statsd": {
+    "enabled": false,
+    "host": "127.0.0.1",
+    "port": 8125
+  },
   "default": {
     "enablePost": true,
     "cacheAdapter": "memory",
