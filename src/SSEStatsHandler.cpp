@@ -13,6 +13,8 @@
 #include "SSEClient.h"
 #include "SSEStatsHandler.h"
 #include "HTTPResponse.h"
+#include "StatsdClient.h"
+
 
 /**
   Constructor.
@@ -25,12 +27,16 @@ SSEStatsHandler::SSEStatsHandler() {
   oversized_http_req  = 0;
   invalid_events_rcv  = 0;
   router_read_errors  = 0;
+  totalClients = 0;
+
+  _statsdthread = boost::thread(&SSEStatsHandler::StatsDRun, this);
 }
 
 /**
  Destructor.
 */
 SSEStatsHandler::~SSEStatsHandler() {
+  pthread_cancel(_statsdthread.native_handle());
 }
 
 /**
@@ -45,7 +51,7 @@ void SSEStatsHandler::Init(SSEConfig* config, SSEServer* server) {
 }
 
 void SSEStatsHandler::Update() {
-  ulong totalClients     = 0;
+  totalClients          = 0;
   ulong totalEvents      = 0;
   ulong totalConnects    = 0;
   ulong totalDisconnects = 0;
@@ -125,4 +131,21 @@ void SSEStatsHandler::SendToClient(SSEClient* client) {
 
   client->Send(res.Get());
   client->Destroy();
+}
+
+
+void SSEStatsHandler::StatsDRun() {
+  if (_config->GetValueBool("statsd.enabled") == false) {
+    return;
+  }
+
+  statsd::StatsdClient client(_config->GetValue("statsd.host"), _config->GetValueInt("statsd.port"), _config->GetValue("statsd.namespace") + ".");
+
+  while(1) {
+    Update();
+    client.gauge("clients", totalClients);
+    DLOG(INFO) << "Sending clients to statsd" << totalClients;
+
+    boost::this_thread::sleep(boost::posix_time::milliseconds(60 * 1000));
+  }
 }

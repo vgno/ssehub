@@ -2,6 +2,7 @@
 #define SSESTATSHANDLER_H
 
 #include <string>
+#include <boost/thread.hpp>
 #include "Common.h"
 
 extern int stop;
@@ -17,10 +18,12 @@ class SSEStatsHandler {
     ulong router_read_errors;
     ulong invalid_http_req;
     ulong oversized_http_req;
+    ulong totalClients;
 
     SSEStatsHandler();
     ~SSEStatsHandler();
     void Init(SSEConfig* config, SSEServer* server);
+    void StatsDRun();
     const std::string& GetJSON();
     void SendToClient(SSEClient* client);
 
@@ -28,6 +31,7 @@ class SSEStatsHandler {
     std::string _jsonData;
     SSEConfig* _config;
     SSEServer* _server;
+    boost::thread _statsdthread;
     int _startTime;
 
     void Update();
