@@ -58,6 +58,7 @@ void SSEConfig::InitDefaults() {
  ConfigMap["default.cacheAdapter"]            = "redis";
  ConfigMap["default.cacheLength"]             = "500";
  ConfigMap["default.allowedOrigins"]          = "*";
+ ConfigMap["default.collapseDuplicates"]      = "false";
 }
 
 /**
@@ -77,7 +78,7 @@ bool SSEConfig::load(const char *file) {
   // Populate ConfigMap.
   BOOST_FOREACH(ConfigMap_t::value_type &element, ConfigMap) {
     try {
-  // Event broadcasted OK..
+      // Event broadcasted OK..
       string envVar = boost::replace_all_copy(element.first, ".", "");
       const char* env_p = getenv(envVar.c_str());
       string val;
@@ -139,6 +140,7 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
   DefaultChannelConfig.server = this;
   DefaultChannelConfig.cacheAdapter = GetValue("default.cacheAdapter");
   DefaultChannelConfig.cacheLength = GetValueInt("default.cacheLength");
+  DefaultChannelConfig.collapseDuplicates = GetValueBool("default.collapseDuplicates");
 
   // Get default publish restrictions.
   try {
@@ -186,6 +188,7 @@ void SSEConfig::LoadChannels(boost::property_tree::ptree& pt) {
     // Optional channel parameters.
     ChannelMap[chName].cacheAdapter = child.second.get<std::string>("cacheAdapter", DefaultChannelConfig.cacheAdapter);
     ChannelMap[chName].cacheLength = child.second.get<int>("cacheLength", DefaultChannelConfig.cacheLength);
+    ChannelMap[chName].collapseDuplicates = child.second.get<bool>("collapseDuplicates", DefaultChannelConfig.collapseDuplicates);
    }
   } catch(...) {
     if (!GetValueBool("server.allowUndefinedChannels")) {

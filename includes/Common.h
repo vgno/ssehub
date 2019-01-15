@@ -1,4 +1,4 @@
-#define NDEBUG
+#undef NDEBUG
 #include <glog/logging.h>
 
 #define ulong unsigned long

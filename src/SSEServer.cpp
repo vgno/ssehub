@@ -139,6 +139,7 @@ void SSEServer::PostHandler(SSEClient* client, HTTPRequest* req) {
   Start the server.
 */
 void SSEServer::Run() {
+  unsigned int i;
   InitSocket();
 
   if (_config->GetValueBool("amqp.enabled")) {
@@ -149,8 +150,38 @@ void SSEServer::Run() {
 
   InitChannels();
 
-  _routerthread = boost::thread(&SSEServer::ClientRouterLoop, this);
-  AcceptLoop();
+  // Start client workers.
+  for (i = 0; i < 4; i++) {
+    boost::shared_ptr<worker_ctx_t> ctx;
+    ctx->id = i;
+    ctx->epoll_fd = 0;
+    ctx->thread = boost::thread(&SSEServer::ClientWorker, this, ctx);
+
+    _clientWorkers.push_back(ctx);
+  }
+
+  // Start accept workers.
+  for (i = 0; i < 4; i++) {
+    boost::shared_ptr<worker_ctx_t> ctx;
+    struct epoll_event event;
+
+    ctx->id = i;
+    ctx->epoll_fd = epoll_create1(0);
+
+    LOG_IF(FATAL, ctx->epoll_fd == -1) << "epoll_create1 failed for AcceptWorker " << ctx->id;
+
+    event.events = EPOLLIN | EPOLLEXCLUSIVE;
+    event.data.ptr = NULL;
+
+    LOG_IF(FATAL, epoll_ctl(ctx->epoll_fd, EPOLL_CTL_ADD, _serversocket, &event) == -1) << "Failed to add serversocket to epoll in AcceptWorker " << ctx->id;
+
+    ctx->thread = boost::thread(&SSEServer::AcceptWorker, this, ctx);
+    _acceptWorkers.push_back(ctx);
+  }
+
+  for (vector<boost::shared_ptr<worker_ctx_t>>::iterator it = _acceptWorkers.begin(); it != _acceptWorkers.end(); it++) {
+    it->thread.join();
+  }
 }
 
 /**
@@ -177,11 +208,9 @@ void SSEServer::InitSocket() {
     "Could not bind server socket to " << _config->GetValue("server.bindip") << ":" << _config->GetValue("server.port");
 
   LOG_IF(FATAL, (listen(_serversocket, 0)) == -1) << "Call to listen() failed.";
+  LOG_IF(FATAL, fcntl(_serversocket, F_SETFL, O_NONBLOCK) == -1) << "fcntl O_NONBLOCK on serversocket failed.";
 
   LOG(INFO) << "Listening on " << _config->GetValue("server.bindip")  << ":" << _config->GetValue("server.port");
-
-  _efd = epoll_create1(0);
-  LOG_IF(FATAL, _efd == -1) << "epoll_create1 failed.";
 }
 
 /**
@@ -232,74 +261,92 @@ SSEConfig* SSEServer::GetConfig() {
 }
 
 /**
-  Accept new client connections.
-*/
-void SSEServer::AcceptLoop() {
-  while(!stop) {
-    struct sockaddr_in csin;
-    socklen_t clen;
-    int tmpfd;
+ Removes  socket from epoll fd set and deletes SSEClient object.
+ @param efd    Epoll filedescriptor.
+ @param client SSEClient to remove.
+**/
+void SSEServer::RemoveClient(int efd, SSEClient* client) {
+  epoll_ctl(efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
+  client->Destroy();
+}
 
-    memset((char*)&csin, '\0', sizeof(csin));
-    clen = sizeof(csin);
+void SSEServer::AddClientToWorker(SSEClient* client) {
 
-    // Accept the connection.
-    tmpfd = accept(_serversocket, (struct sockaddr*)&csin, &clen);
-
-    /* Got an error ? Handle it. */
-    if (tmpfd == -1) {
-      switch (errno) {
-        case EMFILE:
-          LOG(ERROR) << "All connections available used. Cannot accept more connections.";
-          usleep(100000);
-        break;
-
-        default:
-          LOG_IF(ERROR, !stop) << "Error in accept(): " << strerror(errno);
-      }
-
-      continue; /* Try again. */
-    }
-
-    // Set non-blocking on client socket.
-    fcntl(tmpfd, F_SETFL, O_NONBLOCK);
-
-    // Add it to our epoll eventlist.
-    SSEClient* client = new SSEClient(tmpfd, &csin);
-
-    struct epoll_event event;
-    event.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
-    event.data.ptr = static_cast<SSEClient*>(client);
-
-    int ret = epoll_ctl(_efd, EPOLL_CTL_ADD, tmpfd, &event);
-    if (ret == -1) {
-      LOG(ERROR) << "Could not add client to epoll eventlist: " << strerror(errno);
-      client->Destroy();
-      continue;
-    }
-  }
 }
 
 /**
- Removes  socket from epoll fd set and deletes SSEClient object.
- @param client SSEClient to remove.
-**/
-void SSEServer::RemoveClient(SSEClient* client) {
-  epoll_ctl(_efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
-  client->Destroy();
+  Accept new client connections.
+*/
+void SSEServer::AcceptWorker(boost::shared_ptr<worker_ctx_t> ctx) {
+  boost::shared_ptr<struct epoll_event[]> eventList(new struct epoll_event[MAXEVENTS]);
+
+  DLOG(INFO) << "Started AcceptWorker " << ctx->id;
+
+  while(!stop) {
+
+    int n = epoll_wait(ctx->epoll_fd, eventList.get(), MAXEVENTS, -1);
+
+    for (int i = 0; i < n; i++) {
+      struct sockaddr_in csin;
+      socklen_t clen;
+      int tmpfd;
+
+      memset((char*)&csin, '\0', sizeof(csin));
+      clen = sizeof(csin);
+
+      // Accept the connection.
+      tmpfd = accept(_serversocket, (struct sockaddr*)&csin, &clen);
+
+      if (tmpfd == -1) {
+        switch (errno) {
+          case EMFILE:
+            LOG(ERROR) << "All connections available used. Cannot accept more connections.";
+            usleep(100000);
+          break;
+
+          default:
+            LOG_IF(ERROR, !stop) << "Error in accept(): " << strerror(errno);
+        }
+
+        continue; /* Try again. */
+      }
+
+      // Set non-blocking on client socket.
+      fcntl(tmpfd, F_SETFL, O_NONBLOCK);
+
+      // Add it to our epoll eventlist.
+      SSEClient* client = new SSEClient(tmpfd, &csin);
+
+      DLOG(INFO) << "Client accepted in AcceptWorker " << ctx->id;
+
+      struct epoll_event event;
+      event.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
+      event.data.ptr = static_cast<SSEClient*>(client);
+
+     /* int ret = epoll_ctl(_efd, EPOLL_CTL_ADD, tmpfd, &event);
+      if (ret == -1) {
+        LOG(ERROR) << "Could not add client to epoll eventlist: " << strerror(errno);
+        client->Destroy();
+        continue;
+      }*/
+    }
+  }
+
+  close(ctx->epoll_fd);
+  DLOG(INFO) << "AcceptWorker " << ctx->id << " exited.";
 }
 
 /**
   Read request and route client to the requested channel.
 */
-void SSEServer::ClientRouterLoop() {
+void SSEServer::ClientWorker(boost::shared_ptr<worker_ctx_t> ctx) {
   char buf[4096];
   boost::shared_ptr<struct epoll_event[]> eventList(new struct epoll_event[MAXEVENTS]);
 
   LOG(INFO) << "Started client router thread.";
 
   while(1) {
-    int n = epoll_wait(_efd, eventList.get(), MAXEVENTS, -1);
+    int n = epoll_wait(ctx->epoll_fd, eventList.get(), MAXEVENTS, -1);
 
     for (int i = 0; i < n; i++) {
       SSEClient* client;
@@ -308,14 +355,14 @@ void SSEServer::ClientRouterLoop() {
       // Close socket if an error occurs.
       if (eventList[i].events & EPOLLERR) {
         DLOG(WARNING) << "Error occurred while reading data from client " << client->GetIP() << ".";
-        RemoveClient(client);
+        RemoveClient(efd, client);
         stats.router_read_errors++;
         continue;
       }
 
       if ((eventList[i].events & EPOLLHUP) || (eventList[i].events & EPOLLRDHUP)) {
         DLOG(WARNING) << "Client " << client->GetIP() << " hung up in router thread.";
-        RemoveClient(client);
+        RemoveClient(ctx->epoll_fd, client);
         continue;
       }
 
@@ -324,7 +371,7 @@ void SSEServer::ClientRouterLoop() {
 
       if (len <= 0) {
         stats.router_read_errors++;
-        RemoveClient(client);
+        RemoveClient(ctx->epoll_fd, client);
         continue;
       }
 
@@ -338,12 +385,12 @@ void SSEServer::ClientRouterLoop() {
         case HTTP_REQ_INCOMPLETE: continue;
 
         case HTTP_REQ_FAILED:
-         RemoveClient(client);
+         RemoveClient(ctx->epoll_fd, client);
          stats.invalid_http_req++;
          continue;
 
         case HTTP_REQ_TO_BIG:
-         RemoveClient(client);
+         RemoveClient(ctx->epoll_fd, client);
          stats.oversized_http_req++;
          continue;
 
@@ -351,19 +398,19 @@ void SSEServer::ClientRouterLoop() {
 
         case HTTP_REQ_POST_INVALID_LENGTH:
           { HTTPResponse res(411, "", false); client->Send(res.Get()); }
-          RemoveClient(client);
+          RemoveClient(ctx->epoll_fd, client);
           continue;
 
         case HTTP_REQ_POST_TOO_LARGE:
           DLOG(INFO) << "Client " <<  client->GetIP() << " sent too much POST data.";
           { HTTPResponse res(413, "", false); client->Send(res.Get()); }
-          RemoveClient(client);
+          RemoveClient(ctx->epoll_fd, client);
           continue;
 
         case HTTP_REQ_POST_START:
           if (!_config->GetValueBool("server.enablePost")) {
             { HTTPResponse res(400, "", false); client->Send(res.Get()); }
-            RemoveClient(client);
+            RemoveClient(ctx->epoll_fd, client);
           } else {
             { HTTPResponse res(100, "", false); client->Send(res.Get()); }
           }
@@ -378,7 +425,7 @@ void SSEServer::ClientRouterLoop() {
             { HTTPResponse res(400, "", false); client->Send(res.Get()); }
           }
 
-          RemoveClient(client);
+          RemoveClient(ctx->epoll_fd, client);
           continue;
       }
 
@@ -391,7 +438,7 @@ void SSEServer::ClientRouterLoop() {
           HTTPResponse res;
           res.SetBody("OK\n");
           client->Send(res.Get());
-          RemoveClient(client);
+          RemoveClient(ctx->epoll_fd, client);
           continue;
         }
 
@@ -401,14 +448,14 @@ void SSEServer::ClientRouterLoop() {
         DLOG(INFO) << "Channel: " << chName;
 
         if (ch != NULL) {
-          epoll_ctl(_efd, EPOLL_CTL_DEL, client->Getfd(), NULL);
+          epoll_ctl(ctx->epoll_fd, EPOLL_CTL_DEL, client->Getfd(), NULL);
           ch->AddClient(client, req);
         } else {
           HTTPResponse res;
           res.SetStatus(404);
           res.SetBody("Channel does not exist.\n");
           client->Send(res.Get());
-          RemoveClient(client);
+          RemoveClient(ctx->epoll_fd, client);
         }
       }
     }

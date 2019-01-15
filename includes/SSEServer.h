@@ -29,6 +29,12 @@ class HTTPRequest;
 
 typedef std::vector<boost::shared_ptr<SSEChannel> > SSEChannelList;
 
+typedef struct {
+  unsigned int  id;
+  boost::thread thread;
+  int           epoll_fd;
+} worker_ctx_t;
+
 class SSEServer {
   public:
     SSEServer(SSEConfig* config);
@@ -45,17 +51,18 @@ class SSEServer {
     SSEChannelList _channels;
     boost::shared_ptr<SSEInputSource> _datasource;
     SSEStatsHandler stats;
-    boost::thread _routerthread;
+    vector<boost::shared_ptr<worker_ctx_t>> _acceptWorkers;
+    vector<boost::shared_ptr<worker_ctx_t>> _clientWorkers;
     int _serversocket;
-    int _efd;
     struct sockaddr_in _sin;
 
     void InitSocket();
-    void AcceptLoop();
-    void ClientRouterLoop();
+    void AcceptWorker(boost::shared_ptr<worker_ctx_t> ctx);
+    void ClientWorker(boost::shared_ptr<worker_ctx_t> ctx);
     void PostHandler(SSEClient* client, HTTPRequest* req);
     void InitChannels();
-    void RemoveClient(SSEClient* client);
+    void AddClientToWorker(SSEClient* client);
+    void RemoveClient(int efd, SSEClient* client);
     SSEChannel* GetChannel(const std::string id, bool create=false);
 };
 

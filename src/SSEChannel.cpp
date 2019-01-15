@@ -39,6 +39,7 @@ SSEChannel::SSEChannel(ChannelConfig conf, string id) {
   LOG(INFO) << "Cache Adapter: " << _config.cacheAdapter;
   LOG(INFO) << "Cache length: " << _config.cacheLength;
   LOG(INFO) << "Threads per channel: " << _config.server->GetValue("server.threadsPerChannel");
+  LOG(INFO) << "Collapse duplicates: " << _config.collapseDuplicates ? "true" : "false";
 
   _allow_all_origins = (_config.allowedOrigins.size() < 1) ? true : false;
 
@@ -53,7 +54,6 @@ SSEChannel::SSEChannel(ChannelConfig conf, string id) {
   for (int i = 1; i <= 2048; i++) { _evs_preamble_data[i] = '.'; }
   _evs_preamble_data[2049] = '\n';
   _evs_preamble_data[2050] = '\n';
-  _evs_preamble_data[2051] = '\0';
 
   InitializeCache();
   InitializeThreads();
@@ -248,6 +248,16 @@ void SSEChannel::Broadcast(const string& data) {
   @param event Event to broadcast.
 */
 void SSEChannel::BroadcastEvent(SSEEvent& event) {
+  // Don't allow the same event to be published twice in a row if collapseDuplicates is enabled on the channel.
+  if (_config.collapseDuplicates) {
+    if (!_previous_broadcast_data.empty() && _previous_broadcast_data.compare(event.get()) == 0) {
+      DLOG(INFO) << "Collapsing duplicate event on channel " << _config.id << ": " << event.get() << std::endl;
+      return;
+    }
+  }
+
+  _previous_broadcast_data = event.get();
+
   Broadcast(event.get());
   INC_LONG(_stats.num_broadcasted_events);
 

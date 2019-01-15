@@ -3,7 +3,7 @@
     "port": 8080,
     "bind-ip": "0.0.0.0",
     "logdir": "./",
-    "pingInterval": 5,
+    "pingInterval": 30,
     "pingEvent": true,
     "threadsPerChannel": 2,
     "allowUndefinedChannels": true,
@@ -35,6 +35,7 @@
     "cacheAdapter": "memory",
     "cacheLength": 2,
     "allowedOrigins":  "*",
+    "collapseDuplicates": true,
     "restrictPublish": [
       "127.0.0.1"
     ]
@@ -42,7 +43,8 @@
   "channels": [
     {
         "path": "test",
-        "allowedOrigins": ["https://some.host"]
+        "allowedOrigins": ["https://some.host"],
+        "collapseDuplicates": true
     },
     {
         "path": "test2",

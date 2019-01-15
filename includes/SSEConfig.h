@@ -20,6 +20,7 @@ struct ChannelConfig {
   std::vector<iprange_t> allowedPublishers;
   string                 cacheAdapter;
   size_t                 cacheLength;
+  bool                   collapseDuplicates;
 };
 
 typedef std::map<const std::string, std::string> ConfigMap_t;

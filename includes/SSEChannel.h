@@ -66,6 +66,7 @@ class SSEChannel {
     CacheInterface* _cache_adapter;
     bool _allow_all_origins;
     char _evs_preamble_data[2052];
+    string _previous_broadcast_data;
 
     void InitializeCache();
     void InitializeThreads();
