@@ -16,6 +16,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
+#include <memory>
 #include "SSEEvent.h"
 #include "SSEStatsHandler.h"
 #define MAXEVENTS 1024
@@ -27,13 +28,16 @@ class SSEConfig;
 class SSEChannel;
 class SSEInputSource;
 class HTTPRequest;
+class SSEServer;
 
 typedef std::vector<boost::shared_ptr<SSEChannel> > SSEChannelList;
+typedef std::vector<std::shared_ptr<SSEClient> >    ClientList;
 
 typedef struct {
   unsigned int  id;
   boost::thread thread;
   int           epoll_fd;
+  SSEServer*    server;
 } worker_ctx_t;
 
 typedef std::vector<boost::shared_ptr<worker_ctx_t> > WorkerThreadList;
@@ -54,6 +58,7 @@ class SSEServer {
     SSEChannelList _channels;
     boost::shared_ptr<SSEInputSource> _datasource;
     SSEStatsHandler stats;
+    ClientList _clients;
     WorkerThreadList _acceptWorkers;
     WorkerThreadList _clientWorkers;
     WorkerThreadList::iterator _curClientWorker;

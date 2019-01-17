@@ -155,6 +155,7 @@ void SSEServer::Run() {
     boost::shared_ptr<worker_ctx_t> ctx(new worker_ctx_t());
 
     ctx->id = i;
+    ctx->server = this;
   
     ctx->epoll_fd = epoll_create1(0);
     LOG_IF(FATAL, ctx->epoll_fd == -1) << "epoll_create1 failed for ClientWorker " << ctx->id;
@@ -172,6 +173,7 @@ void SSEServer::Run() {
     struct epoll_event event;
 
     ctx->id = i;
+    ctx->server = this;
     ctx->epoll_fd = epoll_create1(0);
 
     LOG_IF(FATAL, ctx->epoll_fd == -1) << "epoll_create1 failed for AcceptWorker " << ctx->id;
@@ -356,13 +358,11 @@ void SSEServer::ClientWorker(boost::shared_ptr<worker_ctx_t> ctx) {
       if (eventList[i].events & EPOLLERR) {
         DLOG(WARNING) << "Error occurred while reading data from client " << client->GetIP() << ".";
         client->Destroy();
-        stats.router_read_errors++;
         continue;
       }
 
       if ((eventList[i].events & EPOLLHUP) || (eventList[i].events & EPOLLRDHUP)) {
         DLOG(WARNING) << "Client " << client->GetIP() << " hung up.";
-        client->Destroy();
         continue;
       }
 
@@ -377,7 +377,6 @@ void SSEServer::ClientWorker(boost::shared_ptr<worker_ctx_t> ctx) {
       size_t len = client->Read(&buf, 4096);
 
       if (len <= 0) {
-        stats.router_read_errors++;
         client->Destroy();
         continue;
       }
