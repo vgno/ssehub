@@ -43,9 +43,11 @@ class SSEClient {
     void Subscribe(const string key, SubscriptionType type);
     bool isFilterAcceptable(const string& data);
     int Flush();
+    bool AddToEpoll(int epoll_fd);
 
    private:
     int _fd;
+    int _epoll_fd;
     struct sockaddr_in _csin;
     bool _dead;
     bool _isEventFiltered;

@@ -14,9 +14,10 @@
 */
 SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   _fd = fd;
+  _epoll_fd = -1;
   _dead = false;
  
-   memcpy(&_csin, csin, sizeof(struct sockaddr_in));
+  memcpy(&_csin, csin, sizeof(struct sockaddr_in));
   DLOG(INFO) << "Initialized client with IP: " << GetIP();
 
   m_httpReq = boost::shared_ptr<HTTPRequest>(new HTTPRequest());
@@ -123,6 +124,7 @@ size_t SSEClient::Read(void* buf, int len) {
 */
 SSEClient::~SSEClient() {
   DLOG(INFO) << "Destructor called for client with IP: " << GetIP();
+  if (_epoll_fd > -1) epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _fd, NULL);
   if (!IsDead()) close(_fd);
 }
 
@@ -131,6 +133,25 @@ SSEClient::~SSEClient() {
 */
 int SSEClient::Getfd() {
   return _fd;
+}
+
+/**
+ * Adds the client file descriptor to an epoll queue.
+ * @param epoll_fd Epoll queue file descriptor.
+*/
+bool SSEClient::AddToEpoll(int epoll_fd) {
+  // Add socket to epoll.
+  struct epoll_event event;
+  event.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
+  event.data.ptr = static_cast<SSEClient*>(this);
+
+  int ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, _fd, &event);
+  if (ret == -1) {
+    LOG(WARNING) << "Could not add client " << GetIP() << " to epoll: " << strerror(errno);
+    return false;
+  }
+
+  return true;
 }
 
 /**

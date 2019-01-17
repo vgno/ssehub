@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <vector>
 #include <string>
+#include <boost/thread/mutex.hpp>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include "SSEEvent.h"
@@ -35,6 +36,8 @@ typedef struct {
   int           epoll_fd;
 } worker_ctx_t;
 
+typedef std::vector<boost::shared_ptr<worker_ctx_t> > WorkerThreadList;
+
 class SSEServer {
   public:
     SSEServer(SSEConfig* config);
@@ -51,8 +54,10 @@ class SSEServer {
     SSEChannelList _channels;
     boost::shared_ptr<SSEInputSource> _datasource;
     SSEStatsHandler stats;
-    vector<boost::shared_ptr<worker_ctx_t>> _acceptWorkers;
-    vector<boost::shared_ptr<worker_ctx_t>> _clientWorkers;
+    WorkerThreadList _acceptWorkers;
+    WorkerThreadList _clientWorkers;
+    WorkerThreadList::iterator _curClientWorker;
+    boost::mutex _clientWorkerLock;
     int _serversocket;
     struct sockaddr_in _sin;
 
@@ -61,8 +66,7 @@ class SSEServer {
     void ClientWorker(boost::shared_ptr<worker_ctx_t> ctx);
     void PostHandler(SSEClient* client, HTTPRequest* req);
     void InitChannels();
-    void AddClientToWorker(SSEClient* client);
-    void RemoveClient(int efd, SSEClient* client);
+    int  GetClientWorkerRR();
     SSEChannel* GetChannel(const std::string id, bool create=false);
 };
 
