@@ -16,7 +16,8 @@ add_executable( ssehub
   src/SSEChannel.cpp
   src/HTTPRequest.cpp
   src/HTTPResponse.cpp
-  src/SSEWorker.cpp
+  src/SSEAcceptorWorker.cpp
+  src/SSEClientWorker.cpp
   src/SSEServer.cpp
   src/SSEConfig.cpp
   src/SSEEvent.cpp

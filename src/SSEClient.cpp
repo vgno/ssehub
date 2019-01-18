@@ -147,9 +147,10 @@ bool SSEClient::AddToEpoll(int epoll_fd) {
 
   int ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, _fd, &event);
   if (ret == -1) {
-    LOG(WARNING) << "Could not add client " << GetIP() << " to epoll: " << strerror(errno);
     return false;
   }
+
+  _epoll_fd = epoll_fd;
 
   return true;
 }

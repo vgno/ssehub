@@ -27,7 +27,7 @@ using namespace std;
 
 class SSEClient {
   public:
-    SSEClient(int, struct sockaddr_in* csin);
+    SSEClient(int fd, struct sockaddr_in* csin);
     ~SSEClient();
     int Send(const string &data, bool flush=true);
     size_t Read(void* buf, int len);

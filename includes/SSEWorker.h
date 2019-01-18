@@ -1,29 +1,69 @@
+#ifndef SSEWORKER_H
+#define SSEWORKER_H
+
 #include <memory>
 #include <thread>
 #include <vector>
 
-class SSEWorkerPool;
+template <class T>
+using SSEWorkerList = std::vector<std::shared_ptr<T>>;
 
 class SSEWorker {
-  friend class SSEWorkerPool;
   public:
-    SSEWorker();
-    ~SSEWorker();
-    void Run();
+    SSEWorker() {}
+    ~SSEWorker() {}
+
+    void Run() {
+      if (!_thread.joinable()) {
+        _thread = std::thread(&SSEWorker::ThreadMain, this);
+      }
+    }
+
+    std::thread& Thread() {
+      return _thread;
+    }
+
+    std::thread::id Id() {
+      return _thread.get_id();
+    }
 
   private:
-    unsigned int _pool_id;
     std::thread _thread;
-    virtual void ThreadMain();
+
+  protected:
+    virtual void ThreadMain() {}
 };
 
-class SSEWorkerPool {
+template <class T>
+class SSEWorkerGroup {
   public:
-    SSEWorkerPool();
-    ~SSEWorkerPool();
+    SSEWorkerGroup<T>() {};
+    ~SSEWorkerGroup<T>(){};
 
-    SSEWorker* AddWorker(SSEWorker* worker);
+    void AddWorker(T* worker) {
+       _workers.push_back(std::shared_ptr<T>(worker));
+    }
+
+    void StartWorkers() {
+      for (auto &wrk :_workers) {
+        wrk->Run();
+      }
+    }
+
+    void JoinAll() {
+      for (auto &wrk : _workers) {
+        if (wrk->Thread().joinable()) {
+          wrk->Thread().join();
+        }
+      }
+    }
+
+    SSEWorkerList<T>& GetWorkerList() {
+      return _workers;
+    }
 
   private:
-    std::vector<std::unique_ptr<SSEWorker>> _workers;
+    SSEWorkerList<T> _workers;
 };
+
+#endif

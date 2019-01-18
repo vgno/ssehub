@@ -13,13 +13,15 @@
 #include <errno.h>
 #include <vector>
 #include <string>
-#include <boost/thread/mutex.hpp>
+#include <mutex>
 #include <boost/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <memory>
 #include "SSEEvent.h"
 #include "SSEStatsHandler.h"
-#define MAXEVENTS 1024
+#include "SSEWorker.h"
+#include "SSEClientWorker.h"
+#include "SSEAcceptorWorker.h"
 
 extern int stop;
 
@@ -28,19 +30,11 @@ class SSEConfig;
 class SSEChannel;
 class SSEInputSource;
 class HTTPRequest;
+class SSEClientWorker;
+class SSEAcceptorWorker;
 class SSEServer;
 
 typedef std::vector<boost::shared_ptr<SSEChannel> > SSEChannelList;
-typedef std::vector<std::shared_ptr<SSEClient> >    ClientList;
-
-typedef struct {
-  unsigned int  id;
-  boost::thread thread;
-  int           epoll_fd;
-  SSEServer*    server;
-} worker_ctx_t;
-
-typedef std::vector<boost::shared_ptr<worker_ctx_t> > WorkerThreadList;
 
 class SSEServer {
   public:
@@ -48,8 +42,10 @@ class SSEServer {
     ~SSEServer();
 
     void Run();
+    int GetListeningSocket();
     const SSEChannelList& GetChannelList();
     SSEConfig* GetConfig();
+    SSEClientWorker* GetClientWorker();
     bool IsAllowedToPublish(SSEClient* client, const struct ChannelConfig& chConf);
     bool Broadcast(SSEEvent& event);
 
@@ -58,17 +54,12 @@ class SSEServer {
     SSEChannelList _channels;
     boost::shared_ptr<SSEInputSource> _datasource;
     SSEStatsHandler stats;
-    ClientList _clients;
-    WorkerThreadList _acceptWorkers;
-    WorkerThreadList _clientWorkers;
-    WorkerThreadList::iterator _curClientWorker;
-    boost::mutex _clientWorkerLock;
+    SSEWorkerGroup<SSEAcceptorWorker> _acceptors;
+    SSEWorkerGroup<SSEClientWorker> _client_workers;
     int _serversocket;
     struct sockaddr_in _sin;
 
     void InitSocket();
-    void AcceptWorker(boost::shared_ptr<worker_ctx_t> ctx);
-    void ClientWorker(boost::shared_ptr<worker_ctx_t> ctx);
     void PostHandler(SSEClient* client, HTTPRequest* req);
     void InitChannels();
     int  GetClientWorkerRR();
