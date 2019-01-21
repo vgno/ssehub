@@ -38,8 +38,8 @@ void SSEAcceptorWorker::ThreadMain() {
 
   LOG_IF(FATAL, epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, _server->GetListeningSocket(), &event) == -1) << "Failed to add serversocket to epoll in AcceptWorker " << Id();
 
-  while(1) {
-    int n = epoll_wait(_epoll_fd, eventList.get(), MAXEVENTS, -1);
+  while(!StopRequested()) {
+    int n = epoll_wait(_epoll_fd, eventList.get(), MAXEVENTS, 1000);
 
     for (int i = 0; i < n; i++) {
       struct sockaddr_in csin;
@@ -74,4 +74,6 @@ void SSEAcceptorWorker::ThreadMain() {
       DLOG(INFO) << "Client accepted in AcceptWorker " << Id();
     }
   }
+
+  DLOG(INFO) << "AcceptorWorker " << Id() << " stopped.";
 }

@@ -3,6 +3,7 @@
 #include <boost/bind.hpp>
 #include <memory>
 #include <mutex>
+#include <chrono>
 #include "Common.h"
 #include "SSEServer.h"
 #include "SSEClient.h"
@@ -12,6 +13,8 @@
 #include "SSEConfig.h"
 #include "SSEChannel.h"
 #include "InputSources/amqp/AmqpInputSource.h"
+
+extern int stop;
 
 using namespace std;
 
@@ -31,8 +34,7 @@ SSEServer::~SSEServer() {
   DLOG(INFO) << "SSEServer destructor called.";
 
   close(_serversocket);
-
-  /* TODO: Quit worker threads and close epoll filedescriptors. */
+  _acceptors.JoinAll();
 }
 
 int SSEServer::GetListeningSocket() {
@@ -166,7 +168,10 @@ void SSEServer::Run() {
   }
 
   _acceptors.StartWorkers();
-  _acceptors.JoinAll();
+  
+  while(!stop) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  }
 }
 
 /**

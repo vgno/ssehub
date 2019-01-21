@@ -14,7 +14,6 @@ class SSEAcceptorWorker : public SSEWorker {
     int        _epoll_fd;
 
   protected:
-
     void ThreadMain();
 };
 

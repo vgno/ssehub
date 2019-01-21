@@ -53,6 +53,8 @@ int main(int argc, char **argv) {
 
   sigemptyset(&(sa.sa_mask));
   sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGQUIT, &sa, NULL);
+  sigaction(SIGHUP, &sa, NULL);
 
   SSEServer server(&conf);
   server.Run();

@@ -4,13 +4,19 @@
 #include <memory>
 #include <thread>
 #include <vector>
+#include <future>
+#include <chrono>
+
 
 template <class T>
 using SSEWorkerList = std::vector<std::shared_ptr<T>>;
 
 class SSEWorker {
   public:
-    SSEWorker() {}
+    SSEWorker() {
+      _stop_requested_future = _stop_requested.get_future();
+    }
+
     ~SSEWorker() {}
 
     void Run() {
@@ -27,8 +33,22 @@ class SSEWorker {
       return _thread.get_id();
     }
 
+    bool StopRequested() {
+      if (_stop_requested_future.wait_for(std::chrono::milliseconds(0)) == std::future_status::timeout) {
+        return false;
+      }
+
+      return true;
+    }
+
+    void Stop() {
+      _stop_requested.set_value();
+    }
+
   private:
     std::thread _thread;
+    std::promise<void> _stop_requested;
+    std::future<void> _stop_requested_future;
 
   protected:
     virtual void ThreadMain() {}
@@ -53,6 +73,7 @@ class SSEWorkerGroup {
     void JoinAll() {
       for (auto &wrk : _workers) {
         if (wrk->Thread().joinable()) {
+          wrk->Stop();
           wrk->Thread().join();
         }
       }
