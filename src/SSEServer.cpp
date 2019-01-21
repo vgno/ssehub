@@ -24,7 +24,7 @@ using namespace std;
 */
 SSEServer::SSEServer(SSEConfig *config) {
   _config = config;
-  stats.Init(_config, this);
+  //stats.Init(_config, this);
 }
 
 /**
@@ -34,7 +34,7 @@ SSEServer::~SSEServer() {
   DLOG(INFO) << "SSEServer destructor called.";
 
   close(_serversocket);
-  _acceptors.JoinAll();
+  _client_workers.JoinAll();
 }
 
 int SSEServer::GetListeningSocket() {
@@ -163,15 +163,19 @@ void SSEServer::Run() {
 
   InitChannels();
 */
+  
+  
   for (i = 0; i < 4; i++) {
-    _acceptors.AddWorker(new SSEAcceptorWorker(this));
+    _client_workers.AddWorker(new SSEClientWorker(this));
   }
 
-  _acceptors.StartWorkers();
+  _client_workers.StartWorkers();
   
   while(!stop) {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
+
+  LOG(INFO) << "Exit.";
 }
 
 /**

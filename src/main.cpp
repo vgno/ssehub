@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 
   std::string conf_path = vm["config"].as<std::string>();
   SSEConfig conf;
-  conf.load(conf_path.c_str());
+  //conf.load(conf_path.c_str());
 
   sa.sa_handler = shutdown;
   sa.sa_flags   = 0;

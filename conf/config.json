@@ -43,8 +43,7 @@
   "channels": [
     {
         "path": "test",
-        "allowedOrigins": ["https://some.host"],
-        "collapseDuplicates": true
+        "allowedOrigins": ["https://some.host"]
     },
     {
         "path": "test2",

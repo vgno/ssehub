@@ -7,14 +7,12 @@
 #include "SSEWorker.h"
 #include "SSEServer.h"
 
-typedef std::vector<std::shared_ptr<SSEClient> > ClientList;
+typedef std::unordered_map<unsigned int, std::shared_ptr<SSEClient> > ClientList;
 
 class SSEClientWorker : public SSEWorker {
   public:
     SSEClientWorker(SSEServer* server);
     ~SSEClientWorker();
-
-    void NewClient(int fd, struct sockaddr_in* csin);
 
   private:
     SSEServer* _server;
@@ -22,6 +20,10 @@ class SSEClientWorker : public SSEWorker {
 
     ClientList _client_list;
     std::mutex _client_list_mutex;
+
+    void _newClient(int fd, struct sockaddr_in* csin);
+    void _acceptClient();
+    void _read(std::shared_ptr<SSEClient> client, ClientList::iterator it);
 
   protected:
     void ThreadMain();

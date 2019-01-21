@@ -2,7 +2,7 @@
 #define SSECLIENT_H
 
 #include <string>
-#include <deque>
+#include <mutex>
 #include <sys/epoll.h>
 #include <netinet/in.h>
 #include <stdint.h>
@@ -29,6 +29,7 @@ class SSEClient {
   public:
     SSEClient(int fd, struct sockaddr_in* csin);
     ~SSEClient();
+    int Write(const string &data);
     int Send(const string &data, bool flush=true);
     size_t Read(void* buf, int len);
     int Getfd();
@@ -43,22 +44,25 @@ class SSEClient {
     void Subscribe(const string key, SubscriptionType type);
     bool isFilterAcceptable(const string& data);
     int Flush();
-    bool AddToEpoll(int epoll_fd);
-
+    int AddToEpoll(int epoll_fd, uint32_t events);
+  
    private:
     int _fd;
-    int _epoll_fd;
     struct sockaddr_in _csin;
+    struct epoll_event _epoll_event;
+    int   _epoll_fd;
     bool _dead;
     bool _isEventFiltered;
     bool _isIdFiltered;
-    string _sndBuf;
     vector<SubscriptionElement> _subscriptions;
-    boost::mutex _sndBufLock;
+    string _write_buffer;
+    std::mutex _write_lock;
     boost::shared_ptr<HTTPRequest> m_httpReq;
-    size_t _prune_sendbuffer_bytes(size_t bytes);
+    size_t _prune_write_buffer_bytes(size_t bytes);
     int _write_sndbuf();
     const string _get_sse_field(const string& data, const string& fieldName);
+    void _enable_epoll_out();
+    void _disable_epoll_out();
 };
 
 #endif

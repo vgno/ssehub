@@ -1,11 +1,27 @@
 #include "Common.h"
+#include <mutex>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
+#include <fcntl.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/foreach.hpp>
 #include "SSEClient.h"
 #include "HTTPRequest.h"
+
+/*
+Stop using EPOLLET. It's almost impossible to get right.
+
+Don't ask for EPOLLOUT events if you have nothing to send.
+
+When you have data to send on a connection, follow this logic:
+
+A) If there's already data in your send queue for that connection, just add the new data. You're done.
+
+B) Try to send the data immediately. If you send it all, you're done.
+
+C) Save the leftover data in the send queue for this connection. Now ask for EPOLLOUT for this connection.
+*/
 
 /**
  Constructor.
@@ -14,6 +30,7 @@
 */
 SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   _fd = fd;
+  _epoll_event.data.fd = fd;
   _epoll_fd = -1;
   _dead = false;
  
@@ -26,6 +43,9 @@ SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
 
   _isIdFiltered = false;
   _isEventFiltered = false;
+
+  // Set socket to non-blocking.
+  fcntl(fd, F_SETFL, O_NONBLOCK);
 
   // Set KEEPALIVE on socket.
   setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char*)&flag, sizeof(int));
@@ -47,67 +67,85 @@ void SSEClient::Destroy() {
   delete(this);
 }
 
-/*
- Cut off @param bytes from our internal sendbuffer.
- @param bytes Number of bytes to cut off.
-*/
-size_t SSEClient::_prune_sendbuffer_bytes(size_t bytes) {
-  if (_sndBuf.length() < 1) {
-    return 0;
-  }
+int SSEClient::AddToEpoll(int epoll_fd, uint32_t events) {
+  _epoll_event.events = events;
 
-  if (bytes >= _sndBuf.length()) {
-    _sndBuf.clear();
-    return 0;
-  }
-
-  _sndBuf = _sndBuf.substr(bytes, string::npos);
-  return _sndBuf.length();
-}
-
-
-/*
-  Write single element in the send buffer using write().
-*/
-int SSEClient::_write_sndbuf() {
-  int ret = 0;
-
-  if (_sndBuf.length() < 1) return 0;
-  ret = write(_fd, _sndBuf.c_str(), _sndBuf.length());
-
-  if (ret <= 0) {
-    DLOG(INFO) << GetIP() << ": write flush error: " << strerror(errno);
-  } else if ((unsigned int)ret < _sndBuf.length()) {
-    _prune_sendbuffer_bytes(ret);
-    DLOG(INFO) << GetIP() << ": Could not write() entire buffer, wrote " << ret << " of " << _sndBuf.length() << " bytes.";
-  } else {
-    _sndBuf.clear();
+  int ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, _fd, &_epoll_event);
+  if (ret == 0) {
+    _epoll_fd = epoll_fd;
   }
 
   return ret;
 }
 
 /*
+ Cut off @param bytes from our internal write buffer.
+ @param bytes Number of bytes to cut off.
+*/
+size_t SSEClient::_prune_write_buffer_bytes(size_t bytes) {
+  if (_write_buffer.length() < 1) {
+    return 0;
+  }
+
+  if (bytes >= _write_buffer.length()) {
+    _write_buffer.clear();
+    return 0;
+  }
+
+  _write_buffer = _write_buffer.substr(bytes, string::npos);
+  return _write_buffer.length();
+}
+
+void SSEClient::_enable_epoll_out() {
+  if (_epoll_fd != -1 && !(_epoll_event.events & EPOLLOUT)) {
+    _epoll_event.events |= EPOLLOUT;
+    epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, _fd, &_epoll_event);
+  }
+}
+
+void SSEClient::_disable_epoll_out() {
+  if (_epoll_fd != -1 && (_epoll_event.events & EPOLLOUT)) {
+    _epoll_event.events &= ~EPOLLOUT;
+    epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, _fd, &_epoll_event);
+  }
+}
+
+/*
+  Write single element in the send buffer using write().
+*/
+int SSEClient::Write(const string &data) {
+  std::lock_guard<std::mutex> lock(_write_lock);
+  int ret = 0;
+
+  _write_buffer.append(data);
+  if (_write_buffer.empty()) return 0;
+
+  ret = write(_fd, _write_buffer.c_str(), _write_buffer.length());
+
+  if (ret <= 0) {
+    DLOG(INFO) << GetIP() << ": write error: " << strerror(errno);
+    _enable_epoll_out();
+  } else if ((unsigned int)ret < _write_buffer.length()) {
+    DLOG(INFO) << GetIP() << ": Could not write() entire buffer, wrote " << ret << " of " << _write_buffer.length() << " bytes.";
+    _prune_write_buffer_bytes(ret);
+    _enable_epoll_out();
+  } else {
+    _disable_epoll_out();
+    _write_buffer.clear();
+  }
+
+  return ret;
+}
+
+int SSEClient::Send(const string &data, bool flush) {
+  return Write(data);
+}
+
+/*
   Flush data in the sendbuffer.
 */
 int SSEClient::Flush() {
-  boost::mutex::scoped_lock lock(_sndBufLock);
-  return _write_sndbuf();
-}
-
-/**
- Sends data to client.
- @param data String buffer to send.
-*/
-int SSEClient::Send(const string &data, bool flush) {
-  if (!isFilterAcceptable(data)) return 0;
-
-  _sndBufLock.lock();
-  _sndBuf.append(data);
-  _sndBufLock.unlock();
-
-  if (flush) Flush();
-  return _sndBuf.length();
+  return Write("");
 }
 
 /**
@@ -124,8 +162,10 @@ size_t SSEClient::Read(void* buf, int len) {
 */
 SSEClient::~SSEClient() {
   DLOG(INFO) << "Destructor called for client with IP: " << GetIP();
-  if (_epoll_fd > -1) epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _fd, NULL);
-  if (!IsDead()) close(_fd);
+  if (_epoll_fd != -1) {
+    epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _fd, 0);
+  }
+  close(_fd);
 }
 
 /**
@@ -133,26 +173,6 @@ SSEClient::~SSEClient() {
 */
 int SSEClient::Getfd() {
   return _fd;
-}
-
-/**
- * Adds the client file descriptor to an epoll queue.
- * @param epoll_fd Epoll queue file descriptor.
-*/
-bool SSEClient::AddToEpoll(int epoll_fd) {
-  // Add socket to epoll.
-  struct epoll_event event;
-  event.events = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
-  event.data.ptr = static_cast<SSEClient*>(this);
-
-  int ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, _fd, &event);
-  if (ret == -1) {
-    return false;
-  }
-
-  _epoll_fd = epoll_fd;
-
-  return true;
 }
 
 /**

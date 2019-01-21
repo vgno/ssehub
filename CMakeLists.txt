@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.6)
 project (SSEHub)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-set(CMAKE_C_FLAGS "-Wall")
+set(CMAKE_C_FLAGS "-Wall -ggdb")
 set(CMAKE_CXX_FLAGS "-std=c++17")
 
 add_executable( ssehub
@@ -16,7 +16,6 @@ add_executable( ssehub
   src/SSEChannel.cpp
   src/HTTPRequest.cpp
   src/HTTPResponse.cpp
-  src/SSEAcceptorWorker.cpp
   src/SSEClientWorker.cpp
   src/SSEServer.cpp
   src/SSEConfig.cpp

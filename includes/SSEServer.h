@@ -53,8 +53,7 @@ class SSEServer {
     SSEConfig *_config;
     SSEChannelList _channels;
     boost::shared_ptr<SSEInputSource> _datasource;
-    SSEStatsHandler stats;
-    SSEWorkerGroup<SSEAcceptorWorker> _acceptors;
+    //SSEStatsHandler stats;
     SSEWorkerGroup<SSEClientWorker> _client_workers;
     int _serversocket;
     struct sockaddr_in _sin;
