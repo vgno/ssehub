@@ -5,6 +5,7 @@
 #include <deque>
 #include <map>
 #include <string>
+#include <mutex>
 #include <glog/logging.h>
 #include <amqp_tcp_socket.h>
 #include <amqp.h>
@@ -64,6 +65,7 @@ class SSEChannel {
     boost::thread _pingthread;
     ClientHandlerList _clientpool;
     CacheInterface* _cache_adapter;
+    std::mutex      _broadcast_mtx;
     bool _allow_all_origins;
     char _evs_preamble_data[2052];
 

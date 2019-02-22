@@ -266,12 +266,8 @@ void SSEServer::AcceptLoop() {
 
     // Add it to our epoll eventlist.
     SSEClient* client = new SSEClient(tmpfd, &csin);
+    int ret = client->AddToEpoll(_efd, EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR);
 
-    struct epoll_event event;
-    event.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
-    event.data.ptr = static_cast<SSEClient*>(client);
-
-    int ret = epoll_ctl(_efd, EPOLL_CTL_ADD, tmpfd, &event);
     if (ret == -1) {
       LOG(ERROR) << "Could not add client to epoll eventlist: " << strerror(errno);
       client->Destroy();
@@ -299,7 +295,7 @@ void SSEServer::ClientRouterLoop() {
   LOG(INFO) << "Started client router thread.";
 
   while(1) {
-    int n = epoll_wait(_efd, eventList.get(), MAXEVENTS, -1);
+    int n = epoll_wait(_efd, eventList.get(), MAXEVENTS, 5);
 
     for (int i = 0; i < n; i++) {
       SSEClient* client;
@@ -319,16 +315,20 @@ void SSEServer::ClientRouterLoop() {
         continue;
       }
 
+      if (eventList[i].events & EPOLLOUT) {
+        DLOG(INFO) << "Flushing sendbuffer in routerloop.";
+        client->Flush();
+        continue;
+      }
+
       // Read from client.
-      size_t len = client->Read(&buf, 4096);
+      size_t len = client->Read(buf, 4096);
 
       if (len <= 0) {
         stats.router_read_errors++;
         RemoveClient(client);
         continue;
       }
-
-      buf[len] = '\0';
 
       // Parse the request.
       HTTPRequest* req = client->GetHttpReq();

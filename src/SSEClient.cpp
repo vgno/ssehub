@@ -4,6 +4,7 @@
 #include <netinet/tcp.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/foreach.hpp>
+#include <mutex>
 #include "SSEClient.h"
 #include "HTTPRequest.h"
 
@@ -14,6 +15,7 @@
 */
 SSEClient::SSEClient(int fd, struct sockaddr_in* csin) {
   _fd = fd;
+  _epoll_fd = -1;
   _dead = false;
  
    memcpy(&_csin, csin, sizeof(struct sockaddr_in));
@@ -46,63 +48,46 @@ void SSEClient::Destroy() {
   delete(this);
 }
 
-/*
- Cut off @param bytes from our internal sendbuffer.
- @param bytes Number of bytes to cut off.
-*/
-size_t SSEClient::_prune_sendbuffer_bytes(size_t bytes) {
+size_t SSEClient::_prune_write_buffer(size_t bytes) {
+  if (_write_buffer.length() < 1) {
+    return 0;
+  }
 
-  if (_sndBuf.length() < 1) return 0;
-  if (bytes > _sndBuf.size()) _sndBuf.clear();
+  if (bytes >= _write_buffer.length()) {
+    _write_buffer.clear();
+    return 0;
+  }
 
-  _sndBuf = _sndBuf.substr(bytes, _sndBuf.length() - bytes);
-
-  // Return elements present in _sndBuf after removal.
-  return _sndBuf.length();
+  _write_buffer = _write_buffer.substr(bytes, string::npos);
+  return _write_buffer.length();
 }
 
-/*
-  Write single element in the send buffer using write().
-*/
-int SSEClient::_write_sndbuf() {
+ssize_t SSEClient::Send(const string &data) {
+  std::lock_guard<std::mutex> lock(_write_lock);
   int ret = 0;
 
-  if (_sndBuf.length() < 1) return 0;
-  ret = write(_fd, _sndBuf.c_str(), _sndBuf.length());
+  _write_buffer.append(data);
+  if (_write_buffer.empty()) return 0;
+
+  ret = ::write(_fd, _write_buffer.c_str(), _write_buffer.length());
 
   if (ret <= 0) {
-    DLOG(INFO) << GetIP() << ": write flush error: " << strerror(errno);
-  } else if ((unsigned int)ret < _sndBuf.length()) {
-    _prune_sendbuffer_bytes(ret);
-    DLOG(INFO) << GetIP() << ": Could not write() entire buffer, wrote " << ret << " of " << _sndBuf.length() << " bytes.";
+    DLOG(INFO) << GetIP() << ": write error: " << strerror(errno);
+    _enable_epoll_out();
+  } else if ((unsigned int)ret < _write_buffer.length()) {
+    DLOG(INFO) << GetIP() << ": Could not write() entire buffer, wrote " << ret << " of " << _write_buffer.length() << " bytes.";
+    _prune_write_buffer(ret);
+    _enable_epoll_out();
   } else {
-    _sndBuf.clear();
+    _disable_epoll_out();
+    _write_buffer.clear();
   }
 
   return ret;
 }
 
-/*
-  Flush data in the sendbuffer.
-*/
-int SSEClient::Flush() {
-  boost::mutex::scoped_lock lock(_sndBufLock);
-  return _write_sndbuf();
-}
-
-/**
- Sends data to client.
- @param data String buffer to send.
-*/
-int SSEClient::Send(const string &data, bool flush) {
-  if (!isFilterAcceptable(data)) return 0;
-
-  _sndBufLock.lock();
-  _sndBuf.append(data);
-  _sndBufLock.unlock();
-
-  if (flush) Flush();
-  return _sndBuf.length();
+ssize_t SSEClient::Flush() {
+  return Send("");
 }
 
 /**
@@ -110,8 +95,44 @@ int SSEClient::Send(const string &data, bool flush) {
  @param buf Pointer to buffer where data should be read into.
  @param len Bytes to read.
 */
-size_t SSEClient::Read(void* buf, int len) {
-  return read(_fd, buf, len);
+size_t SSEClient::Read(char* buf, int len) {
+  ssize_t bytes_read = ::read(_fd, buf, len);
+
+  if (bytes_read > 0) {
+    buf[bytes_read] = '\0';
+  } else {
+    buf[0] = '\0';
+  }
+
+  return bytes_read;
+}
+
+void SSEClient::_enable_epoll_out() {
+  if (_epoll_fd != -1 && !(_epoll_event.events & EPOLLOUT)) {
+    _epoll_event.events |= EPOLLOUT;
+    epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, _fd, &_epoll_event);
+  }
+}
+
+void SSEClient::_disable_epoll_out() {
+  if (_epoll_fd != -1 && (_epoll_event.events & EPOLLOUT)) {
+    _epoll_event.events &= ~EPOLLOUT;
+    epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, _fd, &_epoll_event);
+  }
+}
+
+int SSEClient::AddToEpoll(int epoll_fd, uint32_t events) {
+  _epoll_event.events = events;
+  _epoll_event.data.fd = _fd;
+  _epoll_event.data.ptr = static_cast<SSEClient*>(this);
+
+  int ret = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, _fd, &_epoll_event);
+
+  if (ret == 0) {
+    _epoll_fd = epoll_fd;
+  }
+
+  return ret;
 }
 
 /**

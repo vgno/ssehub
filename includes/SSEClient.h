@@ -6,6 +6,7 @@
 #include <sys/epoll.h>
 #include <netinet/in.h>
 #include <stdint.h>
+#include <mutex>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include "HTTPRequest.h"
@@ -27,10 +28,10 @@ using namespace std;
 
 class SSEClient {
   public:
-    SSEClient(int, struct sockaddr_in* csin);
+    SSEClient(int fd, struct sockaddr_in* csin);
     ~SSEClient();
-    int Send(const string &data, bool flush=true);
-    size_t Read(void* buf, int len);
+    ssize_t Send(const string &data);
+    size_t Read(char* buf, int len);
     int Getfd();
     HTTPRequest* GetHttpReq();
     const string GetIP();
@@ -42,20 +43,24 @@ class SSEClient {
     bool isSubscribed(const string key, SubscriptionType type);
     void Subscribe(const string key, SubscriptionType type);
     bool isFilterAcceptable(const string& data);
-    int Flush();
+    ssize_t Flush();
+    int AddToEpoll(int epoll_fd, uint32_t events);
 
    private:
     int _fd;
+    int _epoll_fd;
+    struct epoll_event _epoll_event;
     struct sockaddr_in _csin;
     bool _dead;
     bool _isEventFiltered;
     bool _isIdFiltered;
-    string _sndBuf;
     vector<SubscriptionElement> _subscriptions;
-    boost::mutex _sndBufLock;
     boost::shared_ptr<HTTPRequest> m_httpReq;
-    size_t _prune_sendbuffer_bytes(size_t bytes);
-    int _write_sndbuf();
+    string _write_buffer;
+    std::mutex _write_lock;
+    size_t _prune_write_buffer(size_t bytes);
+    void _enable_epoll_out();
+    void _disable_epoll_out();
     const string _get_sse_field(const string& data, const string& fieldName);
 };
 

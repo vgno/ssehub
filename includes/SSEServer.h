@@ -26,6 +26,7 @@ class SSEConfig;
 class SSEChannel;
 class SSEInputSource;
 class HTTPRequest;
+class SSEClient;
 
 typedef std::vector<boost::shared_ptr<SSEChannel> > SSEChannelList;
 

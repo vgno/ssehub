@@ -68,7 +68,7 @@ public:
         Closed 
     } state;
 
-    boost::asio::strand strand;
+    boost::asio::io_service::strand strand;
     boost::asio::ip::tcp::socket socket;
     RedisParser redisParser;
     boost::array<char, 4096> buf;

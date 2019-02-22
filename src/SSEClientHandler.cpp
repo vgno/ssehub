@@ -58,6 +58,8 @@ void SSEClientHandler::ProcessQueue() {
     _msgqueue.WaitPop(msg);
 
     boost::mutex::scoped_lock lock(_clientlist_lock);
+
+    unsigned int i = 0;
     for (SSEClientPtrList::iterator it = _clientlist.begin(); it != _clientlist.end(); it++) {
       SSEClientPtr client = static_cast<SSEClientPtr&>(*it);
 
@@ -69,7 +71,9 @@ void SSEClientHandler::ProcessQueue() {
       }
 
       client->Send(msg);
+      i++;
     }
+    DLOG(INFO) << "Clienthandler " << _id << " broadcast to " << i << " clients.";
   }
 }
 

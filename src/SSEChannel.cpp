@@ -6,6 +6,7 @@
 #include "SSEConfig.h"
 #include "HTTPRequest.h"
 #include "HTTPResponse.h"
+#include <mutex>
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
@@ -212,9 +213,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
 
   client->DeleteHttpReq();
 
-  ev.events   = EPOLLET | EPOLLOUT | EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR;
-  ev.data.ptr = client;
-  ret = epoll_ctl(_efd, EPOLL_CTL_ADD, client->Getfd(), &ev);
+  ret = client->AddToEpoll(_efd, EPOLLIN | EPOLLHUP | EPOLLRDHUP | EPOLLERR);
 
   if (ret == -1) {
     DLOG(ERROR) << "Failed to add client " << client->GetIP() << " to epoll event list.";
@@ -248,6 +247,7 @@ void SSEChannel::Broadcast(const string& data) {
   @param event Event to broadcast.
 */
 void SSEChannel::BroadcastEvent(SSEEvent& event) {
+  std::lock_guard<std::mutex> lck (_broadcast_mtx);
   Broadcast(event.get());
   INC_LONG(_stats.num_broadcasted_events);
 
@@ -277,7 +277,7 @@ void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
   deque<string> events = _cache_adapter->GetEventsSinceId(lastId);
 
   BOOST_FOREACH(const string& event, events) {
-    client->Send(event, SND_NO_FLUSH);
+    client->Send(event);
   }
 }
 
@@ -290,7 +290,7 @@ void SSEChannel::SendCache(SSEClient* client) {
  deque<string> events = _cache_adapter->GetAllEvents();
 
   BOOST_FOREACH(const string& event, events) {
-    client->Send(event, SND_NO_FLUSH);
+    client->Send(event);
   }
 }
 
