@@ -19,6 +19,7 @@ add_executable( ssehub
   src/SSEConfig.cpp
   src/SSEEvent.cpp
   src/SSEStatsHandler.cpp
+  src/StatsdClient.cpp
   src/main.cpp
 )
 
