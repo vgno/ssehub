@@ -60,7 +60,7 @@ void SSEClientHandler::ProcessQueue() {
     boost::mutex::scoped_lock lock(_clientlist_lock);
 
     unsigned int i = 0;
-    for (SSEClientPtrList::iterator it = _clientlist.begin(); it != _clientlist.end(); it++) {
+    for (SSEClientPtrList::iterator it = _clientlist.begin(); it != _clientlist.end();) {
       SSEClientPtr client = static_cast<SSEClientPtr&>(*it);
 
       if (client->IsDead()) {
@@ -71,6 +71,8 @@ void SSEClientHandler::ProcessQueue() {
       }
 
       client->Send(msg);
+
+      it++;
       i++;
     }
     DLOG(INFO) << "Clienthandler " << _id << " broadcast to " << i << " clients.";

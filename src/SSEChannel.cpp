@@ -236,6 +236,7 @@ void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
 */
 void SSEChannel::Broadcast(const string& data) {
   ClientHandlerList::iterator it;
+  std::lock_guard<std::mutex> lck (_broadcast_mtx);
 
   for (it = _clientpool.begin(); it != _clientpool.end(); it++) {
     (*it)->Broadcast(data);
@@ -247,7 +248,6 @@ void SSEChannel::Broadcast(const string& data) {
   @param event Event to broadcast.
 */
 void SSEChannel::BroadcastEvent(SSEEvent& event) {
-  std::lock_guard<std::mutex> lck (_broadcast_mtx);
   Broadcast(event.get());
   INC_LONG(_stats.num_broadcasted_events);
 
