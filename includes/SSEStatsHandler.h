@@ -23,7 +23,6 @@ class SSEStatsHandler {
     SSEStatsHandler();
     ~SSEStatsHandler();
     void Init(SSEConfig* config, SSEServer* server);
-    void StatsDRun();
     const std::string& GetJSON();
     void SendToClient(SSEClient* client);
 
@@ -31,7 +30,6 @@ class SSEStatsHandler {
     std::string _jsonData;
     SSEConfig* _config;
     SSEServer* _server;
-    boost::thread _statsdthread;
     int _startTime;
 
     void Update();
