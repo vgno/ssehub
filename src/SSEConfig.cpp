@@ -66,7 +66,7 @@ bool SSEConfig::load(const char *file) {
   try {
     boost::property_tree::read_json(file, pt);
   } catch (boost::property_tree::ptree_error& e) {
-    LOG(FATAL) << "Error during loading config file: " << e.what();
+    LOG(FATAL) << "Error loading config file: " << e.what();
   }
 
   // Populate ConfigMap.

@@ -159,7 +159,6 @@ void SSEChannel::SetCorsHeaders(HTTPRequest* req, HTTPResponse& res) {
 */
 void SSEChannel::AddClient(SSEClient* client, HTTPRequest* req) {
   HTTPResponse res;
-  struct epoll_event ev;
   int ret;
 
   DLOG(INFO) << "Adding client to channel " << GetId();

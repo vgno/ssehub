@@ -3,6 +3,7 @@ project (SSEHub)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_C_FLAGS "-Wall")
+set(CMAKE_CXX_FLAGS "-Wall -std=c++11")
 
 add_executable( ssehub
   lib/picohttpparser/picohttpparser.c
@@ -19,7 +20,6 @@ add_executable( ssehub
   src/SSEConfig.cpp
   src/SSEEvent.cpp
   src/SSEStatsHandler.cpp
-  src/StatsdClient.cpp
   src/main.cpp
 )
 

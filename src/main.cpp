@@ -5,7 +5,7 @@
 #include "SSEConfig.h"
 #include "SSEServer.h"
 
-#define DEFAULT_CONFIG_FILE "./conf/config.json"
+#define DEFAULT_CONFIG_FILE "/etc/ssehub/config.json"
 
 using namespace std;
 namespace po = boost::program_options;
