@@ -30,7 +30,6 @@ class SSEStatsHandler {
     std::string _jsonData;
     SSEConfig* _config;
     SSEServer* _server;
-    boost::thread _statsdthread;
     int _startTime;
 
     void Update();

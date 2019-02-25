@@ -32,7 +32,6 @@ SSEStatsHandler::SSEStatsHandler() {
  Destructor.
 */
 SSEStatsHandler::~SSEStatsHandler() {
-  pthread_cancel(_statsdthread.native_handle());
 }
 
 /**
