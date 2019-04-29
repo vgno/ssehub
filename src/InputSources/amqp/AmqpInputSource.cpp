@@ -16,6 +16,7 @@ AmqpInputSource::~AmqpInputSource() {
 }
 
 void AmqpInputSource::Start() {
+  heartbeatInterval = _config->GetValueInt("amqp.heartbeatInterval");
   host = _config->GetValue("amqp.host");
   port = _config->GetValueInt("amqp.port");
   user = _config->GetValue("amqp.user");
@@ -78,7 +79,7 @@ bool AmqpInputSource::Connect() {
 
   // Try to log in.
   do {
-   rpc_ret = amqp_login(amqpConn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN,
+   rpc_ret = amqp_login(amqpConn, "/", 0, 131072, heartbeatInterval, AMQP_SASL_METHOD_PLAIN,
     user.c_str(), password.c_str());
 
     if (rpc_ret.reply_type != AMQP_RESPONSE_NORMAL) {

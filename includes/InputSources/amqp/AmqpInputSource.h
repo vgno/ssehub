@@ -17,6 +17,7 @@ class AmqpInputSource : public SSEInputSource {
     std::string exchange;
     std::string routingkey;
     int port;
+    int heartbeatInterval;
     amqp_socket_t *amqpSocket;
     amqp_connection_state_t amqpConn;
     amqp_bytes_t amqpQueueName;

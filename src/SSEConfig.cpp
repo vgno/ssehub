@@ -38,6 +38,7 @@ void SSEConfig::InitDefaults() {
  ConfigMap["server.enablePost"]               = "false";
 
  ConfigMap["amqp.enabled"]                    = "false";
+ ConfigMap["amqp.heartbeatInterval"]          = "30";
  ConfigMap["amqp.host"]                       = "127.0.0.1";
  ConfigMap["amqp.port"]                       = "5672";
  ConfigMap["amqp.user"]                       = "guest";
