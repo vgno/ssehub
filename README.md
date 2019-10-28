@@ -55,6 +55,7 @@ docker run -v ./config/:/ssehub/conf/ -p 8080:8080 quay.io/vgno/ssehub
 ```json
 {
   "server": {
+    "enablePost": true,
     "port": 8080,
     "bind-ip": "0.0.0.0",
     "logdir": "./",
