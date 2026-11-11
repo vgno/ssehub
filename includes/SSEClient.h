@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <stdint.h>
 #include <mutex>
+#include <atomic>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include "HTTPRequest.h"
@@ -31,7 +32,7 @@ class SSEClient {
     SSEClient(int fd, struct sockaddr_in* csin);
     ~SSEClient();
     ssize_t Send(const string &data);
-    size_t Read(char* buf, int len);
+    ssize_t Read(char* buf, int len);
     int Getfd();
     HTTPRequest* GetHttpReq();
     const string GetIP();
@@ -51,7 +52,7 @@ class SSEClient {
     int _epoll_fd;
     struct epoll_event _epoll_event;
     struct sockaddr_in _csin;
-    bool _dead;
+    std::atomic<bool> _dead;
     bool _isEventFiltered;
     bool _isIdFiltered;
     vector<SubscriptionElement> _subscriptions;

@@ -4,6 +4,7 @@
 #include <string>
 #include <pthread.h>
 #include <list>
+#include <atomic>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include "ConcurrentQueue.h"
@@ -26,7 +27,7 @@ class SSEClientHandler {
 
   private:
     int _id;
-    size_t _connected_clients;
+    std::atomic<size_t> _connected_clients;
     SSEClientPtrList _clientlist;
     boost::mutex _clientlist_lock;
     boost::thread _processorthread;

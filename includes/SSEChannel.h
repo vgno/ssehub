@@ -66,6 +66,7 @@ class SSEChannel {
     ClientHandlerList _clientpool;
     CacheInterface* _cache_adapter;
     std::mutex      _broadcast_mtx;
+    std::mutex      _cache_mtx;
     bool _allow_all_origins;
     char _evs_preamble_data[2052];
 

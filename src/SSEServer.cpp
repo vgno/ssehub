@@ -322,7 +322,7 @@ void SSEServer::ClientRouterLoop() {
       }
 
       // Read from client.
-      size_t len = client->Read(buf, 4096);
+      ssize_t len = client->Read(buf, 4096);
 
       if (len <= 0) {
         stats.router_read_errors++;

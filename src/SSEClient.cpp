@@ -95,8 +95,8 @@ ssize_t SSEClient::Flush() {
  @param buf Pointer to buffer where data should be read into.
  @param len Bytes to read.
 */
-size_t SSEClient::Read(char* buf, int len) {
-  ssize_t bytes_read = ::read(_fd, buf, len);
+ssize_t SSEClient::Read(char* buf, int len) {
+  ssize_t bytes_read = ::read(_fd, buf, len - 1);
 
   if (bytes_read > 0) {
     buf[bytes_read] = '\0';
@@ -140,7 +140,7 @@ int SSEClient::AddToEpoll(int epoll_fd, uint32_t events) {
 */
 SSEClient::~SSEClient() {
   DLOG(INFO) << "Destructor called for client with IP: " << GetIP();
-  if (!IsDead()) close(_fd);
+  close(_fd);
 }
 
 /**
@@ -185,8 +185,12 @@ void SSEClient::DeleteHttpReq() {
  Mark client as dead and ready for removal.
 */
 void SSEClient::MarkAsDead() {
+  std::lock_guard<std::mutex> lock(_write_lock);
+  if (_epoll_fd != -1) {
+    epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, _fd, NULL);
+    _epoll_fd = -1;
+  }
   _dead = true;
-  close(_fd);
 }
 
 /*

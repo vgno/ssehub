@@ -73,6 +73,7 @@ SSEChannel::~SSEChannel() {
 */
 void SSEChannel::InitializeCache() {
   const string adapter = _config.cacheAdapter;
+  _cache_adapter = NULL;
   if (adapter == "redis") {
     _cache_adapter = new Redis(_config.id, _config);
   } else if (adapter == "memory") {
@@ -262,6 +263,7 @@ void SSEChannel::BroadcastEvent(SSEEvent& event) {
 */
 void SSEChannel::CacheEvent(SSEEvent& event) {
   if (_cache_adapter) {
+    std::lock_guard<std::mutex> lck (_cache_mtx);
     _cache_adapter->CacheEvent(event);
     _stats.num_cached_events = _cache_adapter->GetSizeOfCachedEvents();
   }
@@ -273,7 +275,12 @@ void SSEChannel::CacheEvent(SSEEvent& event) {
 */
 void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
   deque<string>::const_iterator it;
-  deque<string> events = _cache_adapter->GetEventsSinceId(lastId);
+  deque<string> events;
+  if (!_cache_adapter) return;
+  {
+    std::lock_guard<std::mutex> lck (_cache_mtx);
+    events = _cache_adapter->GetEventsSinceId(lastId);
+  }
 
   BOOST_FOREACH(const string& event, events) {
     client->Send(event);
@@ -286,7 +293,12 @@ void SSEChannel::SendEventsSince(SSEClient* client, string lastId) {
 */
 void SSEChannel::SendCache(SSEClient* client) {
  deque<string>::const_iterator it;
- deque<string> events = _cache_adapter->GetAllEvents();
+ deque<string> events;
+  if (!_cache_adapter) return;
+  {
+    std::lock_guard<std::mutex> lck (_cache_mtx);
+    events = _cache_adapter->GetAllEvents();
+  }
 
   BOOST_FOREACH(const string& event, events) {
     client->Send(event);
